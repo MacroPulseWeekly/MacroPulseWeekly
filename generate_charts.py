@@ -216,14 +216,16 @@ def main():
     ensure_charts_dir()
     colors = register_macro_theme()
 
-    # Fetch data
-    btc = get_btc_data(start="2018-01-01")
-    trends = get_google_ai_trends(start="2018-01-01")
-    # Fix MultiIndex issue on GitHub Actions
+# Fetch data
+btc = get_btc_data(start="2018-01-01")
+trends = get_google_ai_trends(start="2018-01-01")
+
+# Fix MultiIndex issue on GitHub Actions
 trends.index = trends.index.to_flat_index()
 trends.index = pd.to_datetime(trends.index)
 trends.index = trends.index.tz_localize(None)
 trends.index.name = "Date"
+
 # Align BTC and AI trends
 merged = btc.join(trends, how="inner")
 merged = merged.dropna(subset=["CBBTCUSD", "AI_Searches"])
