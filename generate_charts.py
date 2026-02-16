@@ -221,6 +221,7 @@ btc = get_btc_data(start="2018-01-01")
 trends = get_google_ai_trends(start="2018-01-01")
 
 # Fix MultiIndex issue on GitHub Actions
+trends.columns = trends.columns.get_level_values(0)   # ⭐ NEW LINE
 trends.index = trends.index.to_flat_index()
 trends.index = pd.to_datetime(trends.index)
 trends.index = trends.index.tz_localize(None)
