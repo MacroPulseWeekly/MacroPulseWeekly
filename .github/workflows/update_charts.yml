@@ -1,0 +1,35 @@
+name: Update MacroPulseWeekly Charts
+
+on:
+  schedule:
+    - cron: "0 12 * * *"
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          pip install yfinance pytrends plotly pandas
+
+      - name: Run chart generator
+        run: |
+          python3 generate_charts.py
+
+      - name: Commit and push updated charts
+        run: |
+          git config --global user.name "github-actions"
+          git config --global user.email "github-actions@github.com"
+          git add charts/*.html
+          git commit -m "Automated chart update" || echo "No changes to commit"
+          git push
