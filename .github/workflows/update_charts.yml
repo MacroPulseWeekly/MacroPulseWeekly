@@ -1,8 +1,11 @@
 name: Update MacroPulseWeekly Charts
 
+permissions:
+  contents: write
+
 on:
   schedule:
-    - cron: "0 12 * * *"
+    - cron: '0 10 * * *'
   workflow_dispatch:
 
 jobs:
@@ -26,10 +29,11 @@ jobs:
         run: |
           python3 generate_charts.py
 
-      - name: Commit and push updated charts
+      - name: Commit updated charts
         run: |
-          git config --global user.name "github-actions"
-          git config --global user.email "github-actions@github.com"
+          git config --local user.email "github-actions@github.com"
+          git config --local user.name "github-actions"
           git add charts/*.html
           git commit -m "Automated chart update" || echo "No changes to commit"
           git push
+
