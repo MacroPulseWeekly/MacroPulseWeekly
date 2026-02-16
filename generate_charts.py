@@ -35,6 +35,10 @@ def compute_rsi(series, window: int = 14):
 def get_btc_data(start="2018-01-01"):
     btc = yf.download("BTC-USD", start=start)
     btc = btc[["Close"]].rename(columns={"Close": "CBBTCUSD"})
+
+    # ⭐ Flatten MultiIndex columns (GitHub Actions issue)
+    btc.columns = btc.columns.get_level_values(0)
+
     btc.index = btc.index.to_flat_index()
     btc.index = pd.to_datetime(btc.index)
     btc.index = btc.index.tz_localize(None)
