@@ -54,7 +54,13 @@ def get_google_ai_trends(start="2018-01-01"):
 
     trends = trends.rename(columns={"ai": "AI_Searches"})
     trends = trends.drop(columns=["isPartial"], errors="ignore")
+
+    # ⭐ FIX: flatten index BEFORE tz_localize
+    trends.index = trends.index.to_flat_index()
+    trends.index = pd.to_datetime(trends.index)
     trends.index = trends.index.tz_localize(None)
+    trends.index.name = "Date"
+
     return trends
 
 
