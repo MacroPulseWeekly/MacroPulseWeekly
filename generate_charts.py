@@ -224,18 +224,17 @@ trends.index = trends.index.to_flat_index()
 trends.index = pd.to_datetime(trends.index)
 trends.index = trends.index.tz_localize(None)
 trends.index.name = "Date"
+# Align BTC and AI trends
+merged = btc.join(trends, how="inner")
+merged = merged.dropna(subset=["CBBTCUSD", "AI_Searches"])
 
-    # Align BTC and AI trends
-    merged = btc.join(trends, how="inner")
-    merged = merged.dropna(subset=["CBBTCUSD", "AI_Searches"])
+# Build charts
+fg_rsi_fig = build_fg_rsi_chart(btc["CBBTCUSD"], colors)
+btc_ai_fig = build_btc_vs_ai_chart(merged, colors)
 
-    # Build charts
-    fg_rsi_fig = build_fg_rsi_chart(btc["CBBTCUSD"], colors)
-    btc_ai_fig = build_btc_vs_ai_chart(merged, colors)
-
-    # Save charts into charts/ folder
-    fg_rsi_fig.write_html("charts/fg_rsi.html", include_plotlyjs="cdn", full_html=False)
-    btc_ai_fig.write_html("charts/btc_vs_google_ai.html", include_plotlyjs="cdn", full_html=False)
+# Save charts into charts/ folder
+fg_rsi_fig.write_html("charts/fg_rsi.html", include_plotlyjs="cdn", full_html=False)
+btc_ai_fig.write_html("charts/btc_vs_google_ai.html", include_plotlyjs="cdn", full_html=False)
 
 
 if __name__ == "__main__":
