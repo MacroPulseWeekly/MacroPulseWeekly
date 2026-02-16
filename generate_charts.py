@@ -226,29 +226,30 @@ def main():
     ensure_charts_dir()
     colors = register_macro_theme()
 
-# Fetch data
-btc = get_btc_data(start="2018-01-01")
-trends = get_google_ai_trends(start="2018-01-01")
+    # Fetch data
+    btc = get_btc_data(start="2018-01-01")
+    trends = get_google_ai_trends(start="2018-01-01")
 
-# Fix MultiIndex issue on GitHub Actions
-trends.columns = trends.columns.get_level_values(0)   # ⭐ NEW LINE
-trends.index = trends.index.to_flat_index()
-trends.index = pd.to_datetime(trends.index)
-trends.index = trends.index.tz_localize(None)
-trends.index.name = "Date"
+    # Fix MultiIndex issue on GitHub Actions
+    trends.columns = trends.columns.get_level_values(0)
+    trends.index = trends.index.to_flat_index()
+    trends.index = pd.to_datetime(trends.index)
+    trends.index = trends.index.tz_localize(None)
+    trends.index.name = "Date"
 
-# Align BTC and AI trends
-merged = btc.join(trends, how="inner")
-merged = merged.dropna(subset=["CBBTCUSD", "AI_Searches"])
+    # Align BTC and AI trends
+    merged = btc.join(trends, how="inner")
+    merged = merged.dropna(subset=["CBBTCUSD", "AI_Searches"])
 
-# Build charts
-fg_rsi_fig = build_fg_rsi_chart(btc["CBBTCUSD"], colors)
-btc_ai_fig = build_btc_vs_ai_chart(merged, colors)
+    # Build charts
+    fg_rsi_fig = build_fg_rsi_chart(btc["CBBTCUSD"], colors)
+    btc_ai_fig = build_btc_vs_ai_chart(merged, colors)
 
-# Save charts into charts/ folder
-fg_rsi_fig.write_html("charts/fg_rsi.html", include_plotlyjs="cdn", full_html=False)
-btc_ai_fig.write_html("charts/btc_vs_google_ai.html", include_plotlyjs="cdn", full_html=False)
+    # Save charts
+    fg_rsi_fig.write_html("charts/fg_rsi.html", include_plotlyjs="cdn", full_html=False)
+    btc_ai_fig.write_html("charts/btc_vs_google_ai.html", include_plotlyjs="cdn", full_html=False)
 
 
 if __name__ == "__main__":
     main()
+
