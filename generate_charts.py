@@ -36,7 +36,7 @@ def get_btc_data(start="2018-01-01"):
     btc = yf.download("BTC-USD", start=start)
     btc = btc[["Close"]].rename(columns={"Close": "CBBTCUSD"})
 
-    # ⭐ Flatten MultiIndex columns (GitHub Actions issue)
+    # Flatten MultiIndex columns (GitHub Actions issue)
     btc.columns = btc.columns.get_level_values(0)
 
     btc.index = btc.index.to_flat_index()
@@ -59,15 +59,13 @@ def get_google_ai_trends(start="2018-01-01"):
     trends = trends.rename(columns={"ai": "AI_Searches"})
     trends = trends.drop(columns=["isPartial"], errors="ignore")
 
-    # ⭐ FIX: flatten index BEFORE tz_localize
+    # Flatten index BEFORE tz_localize
     trends.index = trends.index.to_flat_index()
     trends.index = pd.to_datetime(trends.index)
     trends.index = trends.index.tz_localize(None)
     trends.index.name = "Date"
 
     return trends
-    
-
 
 
 # ================================
@@ -219,6 +217,7 @@ def build_btc_vs_ai_chart(merged: pd.DataFrame, colors: dict) -> go.Figure:
 
     return fig
 
+
 def build_clean_rsi_chart(btc_close: pd.Series, colors: dict) -> go.Figure:
     rsi_series = compute_rsi(btc_close, window=14)
     rsi_df = pd.DataFrame({
@@ -230,7 +229,6 @@ def build_clean_rsi_chart(btc_close: pd.Series, colors: dict) -> go.Figure:
 
     fig = go.Figure()
 
-    # RSI line
     fig.add_trace(go.Scatter(
         x=rsi_df.index,
         y=rsi_df["rsi"],
@@ -238,7 +236,6 @@ def build_clean_rsi_chart(btc_close: pd.Series, colors: dict) -> go.Figure:
         line=dict(color=colors["mpw_yellow"], width=2),
     ))
 
-    # Overbought / Oversold
     fig.add_hline(
         y=70,
         line=dict(color=colors["mpw_red"], width=1, dash="dash"),
@@ -263,43 +260,57 @@ def build_clean_rsi_chart(btc_close: pd.Series, colors: dict) -> go.Figure:
 
     return fig
 
+
 # ================================
-# Auto‑generated homepage index
+# Dashboard index builder
 # ================================
 
-def build_charts_index():
-    charts_dir = "charts"
-    files = sorted([f for f in os.listdir(charts_dir) if f.endswith(".html")])
-
-    # Build the list HTML
-    list_items = "\n".join(
-        [f"<li><a href='charts/{f}'>{f.replace('.html','')}</a></li>" for f in files]
-    )
-    chart_list_html = f"<ul>\n{list_items}\n</ul>"
-
-    # Read existing homepage
-    with open("index.html", "r") as fp:
-        content = fp.read()
-
-    # Find placeholder markers
-    start = content.find("<!-- CHART_LIST_START -->")
-    end = content.find("<!-- CHART_LIST_END -->")
+def _inject_block(content: str, start_marker: str, end_marker: str, block_html: str) -> str:
+    start = content.find(start_marker)
+    end = content.find(end_marker)
 
     if start == -1 or end == -1:
-        print("ERROR: Chart list placeholders not found in index.html")
-        return
+        print(f"ERROR: Markers {start_marker} / {end_marker} not found in index.html")
+        return content
 
-    # Build updated homepage
-    new_content = (
-        content[: start + len("<!-- CHART_LIST_START -->")]
-        + "\n" + chart_list_html + "\n"
-        + content[end:]
+    start_end = start + len(start_marker)
+    return content[:start_end] + "\n" + block_html + "\n" + content[end:]
+
+
+def build_dashboard_index(fg_rsi_fig: go.Figure,
+                          btc_ai_fig: go.Figure,
+                          clean_rsi_fig: go.Figure) -> None:
+    # First chart includes PlotlyJS, others reuse it
+    fg_rsi_html = fg_rsi_fig.to_html(full_html=False, include_plotlyjs="cdn")
+    btc_ai_html = btc_ai_fig.to_html(full_html=False, include_plotlyjs=False)
+    clean_rsi_html = clean_rsi_fig.to_html(full_html=False, include_plotlyjs=False)
+
+    with open("index.html", "r", encoding="utf-8") as f:
+        content = f.read()
+
+    content = _inject_block(
+        content,
+        "<!-- FG_RSI_START -->",
+        "<!-- FG_RSI_END -->",
+        fg_rsi_html,
+    )
+    content = _inject_block(
+        content,
+        "<!-- BTC_AI_START -->",
+        "<!-- BTC_AI_END -->",
+        btc_ai_html,
+    )
+    content = _inject_block(
+        content,
+        "<!-- CLEAN_RSI_START -->",
+        "<!-- CLEAN_RSI_END -->",
+        clean_rsi_html,
     )
 
-    # Write updated homepage
-    with open("index.html", "w") as fp:
-        fp.write(new_content)
+    with open("index.html", "w", encoding="utf-8") as f:
+        f.write(content)
 
+    print("Dashboard index updated with embedded charts.")
 
 
 # ================================
@@ -314,7 +325,7 @@ def main():
     btc = get_btc_data(start="2018-01-01")
     trends = get_google_ai_trends(start="2018-01-01")
 
-    # Fix MultiIndex issue on GitHub Actions
+    # Fix MultiIndex issue on GitHub Actions (defensive)
     trends.columns = trends.columns.get_level_values(0)
     trends.index = trends.index.to_flat_index()
     trends.index = pd.to_datetime(trends.index)
@@ -328,23 +339,18 @@ def main():
     # Build charts
     fg_rsi_fig = build_fg_rsi_chart(btc["CBBTCUSD"], colors)
     btc_ai_fig = build_btc_vs_ai_chart(merged, colors)
-    clean_rsi_fig = build_clean_rsi_chart(btc["CBBTCUSD"], colors) 
-    clean_rsi_fig.write_html("charts/rsi.html", include_plotlyjs="cdn", full_html=False)
+    clean_rsi_fig = build_clean_rsi_chart(btc["CBBTCUSD"], colors)
 
-    # Save charts
+    # Optional: still save standalone chart files
     fg_rsi_fig.write_html("charts/fg_rsi.html", include_plotlyjs="cdn", full_html=False)
-    btc_ai_fig.write_html("charts/btc_vs_google_ai.html", include_plotlyjs="cdn", full_html=False) 
+    btc_ai_fig.write_html("charts/btc_vs_google_ai.html", include_plotlyjs="cdn", full_html=False)
     clean_rsi_fig.write_html("charts/rsi.html", include_plotlyjs="cdn", full_html=False)
 
-# ⭐ Automatically rebuild homepage index
-build_charts_index()
-
-
-
+    # Build embedded dashboard homepage
+    build_dashboard_index(fg_rsi_fig, btc_ai_fig, clean_rsi_fig)
 
 
 if __name__ == "__main__":
     main()
-
 
 
