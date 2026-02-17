@@ -219,30 +219,6 @@ def build_btc_vs_ai_chart(merged: pd.DataFrame, colors: dict) -> go.Figure:
 
     return fig
 
-def build_china_deflation_chart(df, colors):
-    fig = go.Figure()
-
-    # Color bars: red for negative, accent color for positive
-    bar_colors = [
-        "#d62728" if val < 0 else colors["accent"]
-        for val in df["Deflator"]
-    ]
-
-    fig.add_trace(go.Bar(
-        x=df["Year"],
-        y=df["Deflator"],
-        marker_color=bar_colors
-    ))
-
-    fig.update_layout(
-        title="China Grapples With Longest Deflation Streak in Decades",
-        yaxis_title="GDP Deflator (%)",
-        template="plotly_white",
-        showlegend=False,
-        margin=dict(l=40, r=40, t=80, b=40)
-    )
-
-    return fig
 
 
 # ================================
@@ -276,15 +252,7 @@ def main():
     fg_rsi_fig.write_html("charts/fg_rsi.html", include_plotlyjs="cdn", full_html=False)
     btc_ai_fig.write_html("charts/btc_vs_google_ai.html", include_plotlyjs="cdn", full_html=False)
 
-    # === China GDP Deflator Chart ===
-    china = get_china_deflator_from_worldbank()
-    china_fig = build_china_deflation_chart(china, colors)
-
-    china_fig.write_html(
-        "charts/china_deflation.html",
-        include_plotlyjs="cdn",
-        full_html=False
-    )
+)
 
 
 if __name__ == "__main__":
