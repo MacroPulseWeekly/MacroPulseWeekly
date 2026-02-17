@@ -1,39 +1,86 @@
 <html>
 <head>
-<title>MacroPulseWeekly Charts</title>
-<meta charset='UTF-8'>
+<title>MacroPulseWeekly Dashboard</title>
+<meta charset="UTF-8">
 <style>
-body { 
-    background:#111; 
-    color:#fff; 
-    font-family:Arial; 
-    padding:40px; 
-}
-a { 
-    color:#4DA3FF; 
-    font-size:20px; 
-    text-decoration:none; 
-}
-a:hover { 
-    text-decoration:underline; 
-}
-li { 
-    margin:12px 0; 
-}
+    body {
+        background:#111;
+        color:#fff;
+        font-family:Arial, sans-serif;
+        margin:0;
+        padding:0;
+    }
+
+    /* Navbar */
+    .navbar {
+        width:100%;
+        padding:20px 40px;
+        box-sizing:border-box;
+        text-align:right;
+        background:#111;
+        position:sticky;
+        top:0;
+        z-index:1000;
+    }
+    .navbar a {
+        color:#4DA3FF;
+        margin-left:20px;
+        text-decoration:none;
+        font-size:18px;
+    }
+    .navbar a:hover {
+        text-decoration:underline;
+    }
+
+    /* Page title */
+    h1 {
+        text-align:left;
+        padding:40px;
+        margin:0;
+        font-size:32px;
+    }
+
+    /* Chart sections */
+    .chart-section {
+        padding:40px;
+        border-bottom:1px solid #333;
+    }
 </style>
 </head>
 
 <body>
 
-<h1>MacroPulseWeekly Charts</h1>
+<div class="navbar">
+    <a href="#top">Home</a>
+    <a href="#fg-rsi">FG‑RSI</a>
+    <a href="#btc-ai">BTC vs Google AI</a>
+</div>
 
-<!-- CHART_LIST_START -->
-<ul>
-<li><a href='charts/btc_vs_google_ai.html'>btc_vs_google_ai</a></li>
-<li><a href='charts/fg_rsi.html'>fg_rsi</a></li>
-<li><a href='charts/rsi.html'>rsi</a></li>
-</ul>
-<!-- CHART_LIST_END -->
+<h1 id="top">MacroPulseWeekly Dashboard</h1>
+
+<!-- ========================= -->
+<!-- FG‑RSI Chart Placeholder -->
+<!-- ========================= -->
+<div id="fg-rsi" class="chart-section">
+<!-- FG_RSI_START -->
+<!-- FG_RSI_END -->
+</div>
+
+<!-- ========================= -->
+<!-- BTC vs Google AI Chart -->
+<!-- ========================= -->
+<div id="btc-ai" class="chart-section">
+<!-- BTC_AI_START -->
+<!-- BTC_AI_END -->
+</div>
+
+<!-- ========================= -->
+<!-- Clean RSI Chart -->
+<!-- ========================= -->
+<div id="clean-rsi" class="chart-section">
+<!-- CLEAN_RSI_START -->
+<!-- CLEAN_RSI_END -->
+</div>
 
 </body>
 </html>
