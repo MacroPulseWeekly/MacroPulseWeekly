@@ -67,7 +67,7 @@ def get_google_ai_trends(start="2018-01-01"):
 
     return trends
     
-    def get_china_deflator_from_worldbank():
+def get_china_deflator_from_worldbank():
     import requests
     import pandas as pd
 
@@ -101,7 +101,6 @@ def get_google_ai_trends(start="2018-01-01"):
     # Sort oldest → newest
     df = df.sort_values("Year")
 
-    # Return only the needed columns
     return df[["Year", "Deflator"]]
 
 
