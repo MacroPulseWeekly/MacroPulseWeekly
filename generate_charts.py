@@ -263,6 +263,39 @@ def build_clean_rsi_chart(btc_close: pd.Series, colors: dict) -> go.Figure:
 
     return fig
 
+# ================================
+# Auto‑generated homepage index
+# ================================
+
+def build_charts_index():
+    charts_dir = "charts"
+    files = sorted([f for f in os.listdir(charts_dir) if f.endswith(".html")])
+
+    html = [
+        "<html>",
+        "<head>",
+        "<title>MacroPulseWeekly Charts</title>",
+        "<meta charset='UTF-8'>",
+        "<style>",
+        "body { background:#111; color:#fff; font-family:Arial; padding:40px; }",
+        "a { color:#4DA3FF; font-size:20px; text-decoration:none; }",
+        "a:hover { text-decoration:underline; }",
+        "li { margin:12px 0; }",
+        "</style>",
+        "</head>",
+        "<body>",
+        "<h1>MacroPulseWeekly Charts</h1>",
+        "<ul>"
+    ]
+
+    for f in files:
+        html.append(f"<li><a href='charts/{f}'>{f.replace('.html','')}</a></li>")
+
+    html += ["</ul>", "</body>", "</html>"]
+
+    with open("index.html", "w") as fp:
+        fp.write("\n".join(html))
+
 
 
 # ================================
@@ -298,6 +331,9 @@ def main():
     fg_rsi_fig.write_html("charts/fg_rsi.html", include_plotlyjs="cdn", full_html=False)
     btc_ai_fig.write_html("charts/btc_vs_google_ai.html", include_plotlyjs="cdn", full_html=False) 
     clean_rsi_fig.write_html("charts/rsi.html", include_plotlyjs="cdn", full_html=False)
+
+# ⭐ Automatically rebuild homepage index
+build_charts_index()
 
 
 
