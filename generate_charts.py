@@ -271,30 +271,34 @@ def build_charts_index():
     charts_dir = "charts"
     files = sorted([f for f in os.listdir(charts_dir) if f.endswith(".html")])
 
-    html = [
-        "<html>",
-        "<head>",
-        "<title>MacroPulseWeekly Charts</title>",
-        "<meta charset='UTF-8'>",
-        "<style>",
-        "body { background:#111; color:#fff; font-family:Arial; padding:40px; }",
-        "a { color:#4DA3FF; font-size:20px; text-decoration:none; }",
-        "a:hover { text-decoration:underline; }",
-        "li { margin:12px 0; }",
-        "</style>",
-        "</head>",
-        "<body>",
-        "<h1>MacroPulseWeekly Charts</h1>",
-        "<ul>"
-    ]
+    # Build the list HTML
+    list_items = "\n".join(
+        [f"<li><a href='charts/{f}'>{f.replace('.html','')}</a></li>" for f in files]
+    )
+    chart_list_html = f"<ul>\n{list_items}\n</ul>"
 
-    for f in files:
-        html.append(f"<li><a href='charts/{f}'>{f.replace('.html','')}</a></li>")
+    # Read existing homepage
+    with open("index.html", "r") as fp:
+        content = fp.read()
 
-    html += ["</ul>", "</body>", "</html>"]
+    # Find placeholder markers
+    start = content.find("<!-- CHART_LIST_START -->")
+    end = content.find("<!-- CHART_LIST_END -->")
 
+    if start == -1 or end == -1:
+        print("ERROR: Chart list placeholders not found in index.html")
+        return
+
+    # Build updated homepage
+    new_content = (
+        content[: start + len("<!-- CHART_LIST_START -->")]
+        + "\n" + chart_list_html + "\n"
+        + content[end:]
+    )
+
+    # Write updated homepage
     with open("index.html", "w") as fp:
-        fp.write("\n".join(html))
+        fp.write(new_content)
 
 
 
