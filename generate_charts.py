@@ -67,38 +67,82 @@ def get_google_ai_trends(start="2018-01-01"):
 
     return trends
     
-def get_china_deflator_from_worldbank():
+def get_china_deflator_from_worldbank(fallback_csv_path="data/china_gdp_deflator.csv"):
+    import time
     import requests
     import pandas as pd
 
-    # World Bank API endpoints
-    nominal_url = "https://api.worldbank.org/v2/country/CHN/indicator/NY.GDP.MKTP.KN.ZG?format=json&per_page=500"
-    real_url = "https://api.worldbank.org/v2/country/CHN/indicator/NY.GDP.MKTP.KD.ZG?format=json&per_page=500"
+    nominal_url = "https://api.worldbank.org/v2/country/CHN/indicator/NY.GDP.MKTP.KN.ZG"
+    real_url = "https://api.worldbank.org/v2/country/CHN/indicator/NY.GDP.MKTP.KD.ZG"
+    params = {"format": "json", "per_page": 500}
 
-    # Fetch nominal GDP growth (%)
-    nominal_response = requests.get(nominal_url).json()
-    nominal_data = nominal_response[1]
-    nominal_df = pd.DataFrame(nominal_data)[["date", "value"]]
-    nominal_df.columns = ["Year", "Nominal"]
+    def fetch_json(url):
+        attempts = 3
+        for i in range(attempts):
+            try:
+                resp = requests.get(url, params=params, timeout=10)
+                if resp.status_code != 200:
+                    # transient server error, retry
+                    time.sleep(1 + i)
+                    continue
+                data = resp.json()
+                return data
+            except requests.RequestException:
+                time.sleep(1 + i)
+                continue
+        return None
 
-    # Fetch real GDP growth (%)
-    real_response = requests.get(real_url).json()
-    real_data = real_response[1]
-    real_df = pd.DataFrame(real_data)[["date", "value"]]
-    real_df.columns = ["Year", "Real"]
+    nominal_json = fetch_json(nominal_url)
+    real_json = fetch_json(real_url)
 
-    # Merge the two datasets
+    # Validate structure: World Bank returns [metadata, data_list]
+    def extract_series(json_obj):
+        if not json_obj or not isinstance(json_obj, list):
+            return None
+        if len(json_obj) < 2 or not isinstance(json_obj[1], list):
+            return None
+        return json_obj[1]
+
+    nominal_data = extract_series(nominal_json)
+    real_data = extract_series(real_json)
+
+    # If either series is missing, try fallback CSV
+    if nominal_data is None or real_data is None:
+        try:
+            df_fallback = pd.read_csv(fallback_csv_path)
+            # Expecting Year and Deflator columns in fallback
+            if {"Year", "Deflator"}.issubset(df_fallback.columns):
+                df_fallback["Year"] = df_fallback["Year"].astype(int)
+                df_fallback["Deflator"] = pd.to_numeric(df_fallback["Deflator"], errors="coerce")
+                return df_fallback[["Year", "Deflator"]].sort_values("Year")
+        except FileNotFoundError:
+            pass
+
+        raise RuntimeError(
+            "World Bank API returned no data and no valid fallback CSV found. "
+            "Check network, API availability, or add a fallback CSV at "
+            f"'{fallback_csv_path}'."
+        )
+
+    # Build DataFrames from API lists
+    nominal_df = pd.DataFrame(nominal_data)
+    real_df = pd.DataFrame(real_data)
+
+    # Defensive selection of fields
+    if "date" not in nominal_df.columns or "value" not in nominal_df.columns:
+        raise RuntimeError("Unexpected World Bank nominal JSON structure.")
+    if "date" not in real_df.columns or "value" not in real_df.columns:
+        raise RuntimeError("Unexpected World Bank real JSON structure.")
+
+    nominal_df = nominal_df[["date", "value"]].rename(columns={"date": "Year", "value": "Nominal"})
+    real_df = real_df[["date", "value"]].rename(columns={"date": "Year", "value": "Real"})
+
+    # Merge and compute deflator
     df = nominal_df.merge(real_df, on="Year", how="inner")
-
-    # Convert types
-    df["Year"] = df["Year"].astype(int)
+    df["Year"] = pd.to_numeric(df["Year"], errors="coerce").astype(int)
     df["Nominal"] = pd.to_numeric(df["Nominal"], errors="coerce")
     df["Real"] = pd.to_numeric(df["Real"], errors="coerce")
-
-    # Compute GDP deflator = nominal growth - real growth
     df["Deflator"] = df["Nominal"] - df["Real"]
-
-    # Sort oldest → newest
     df = df.sort_values("Year")
 
     return df[["Year", "Deflator"]]
