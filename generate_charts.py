@@ -67,53 +67,7 @@ def get_google_ai_trends(start="2018-01-01"):
 
     return trends
     
-def get_china_deflator_from_tradingeconomics(fallback_csv="data/china_gdp_deflator.csv"):
-    import os
-    import requests
-    import pandas as pd
 
-    api_key = os.getenv("TRADINGECONOMICS_KEY")
-
-    # If no API key is set, fall back to local CSV
-    if not api_key:
-        try:
-            df = pd.read_csv(fallback_csv)
-            df["Year"] = df["Year"].astype(int)
-            df["Deflator"] = pd.to_numeric(df["Deflator"], errors="coerce")
-            return df.sort_values("Year")
-        except Exception:
-            raise RuntimeError("No API key and fallback CSV missing or invalid.")
-
-    url = f"https://api.tradingeconomics.com/historical/country/china/indicator/gdp%20deflator?c={api_key}"
-
-    try:
-        resp = requests.get(url, timeout=15)
-        if resp.status_code != 200:
-            raise ValueError("TradingEconomics API returned non-200 status.")
-        data = resp.json()
-    except Exception:
-        # fallback if API fails
-        df = pd.read_csv(fallback_csv)
-        df["Year"] = df["Year"].astype(int)
-        df["Deflator"] = pd.to_numeric(df["Deflator"], errors="coerce")
-        return df.sort_values("Year")
-
-    # Convert API response to DataFrame
-    df = pd.DataFrame(data)
-
-    # Expecting fields: "date", "value"
-    if "date" not in df.columns or "value" not in df.columns:
-        df = pd.read_csv(fallback_csv)
-        df["Year"] = df["Year"].astype(int)
-        df["Deflator"] = pd.to_numeric(df["Deflator"], errors="coerce")
-        return df.sort_values("Year")
-
-    df["Year"] = pd.to_datetime(df["date"]).dt.year
-    df["Deflator"] = pd.to_numeric(df["value"], errors="coerce")
-
-    df = df.groupby("Year")["Deflator"].mean().reset_index()
-
-    return df.sort_values("Year")
 
 
 # ================================
