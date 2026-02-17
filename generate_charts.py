@@ -36,9 +36,7 @@ def get_btc_data(start="2018-01-01"):
     btc = yf.download("BTC-USD", start=start)
     btc = btc[["Close"]].rename(columns={"Close": "CBBTCUSD"})
 
-    # Flatten MultiIndex columns (GitHub Actions issue)
     btc.columns = btc.columns.get_level_values(0)
-
     btc.index = btc.index.to_flat_index()
     btc.index = pd.to_datetime(btc.index)
     btc.index = btc.index.tz_localize(None)
@@ -59,7 +57,6 @@ def get_google_ai_trends(start="2018-01-01"):
     trends = trends.rename(columns={"ai": "AI_Searches"})
     trends = trends.drop(columns=["isPartial"], errors="ignore")
 
-    # Flatten index BEFORE tz_localize
     trends.index = trends.index.to_flat_index()
     trends.index = pd.to_datetime(trends.index)
     trends.index = trends.index.tz_localize(None)
@@ -280,7 +277,7 @@ def _inject_block(content: str, start_marker: str, end_marker: str, block_html: 
 def build_dashboard_index(fg_rsi_fig: go.Figure,
                           btc_ai_fig: go.Figure,
                           clean_rsi_fig: go.Figure) -> None:
-    # First chart includes PlotlyJS, others reuse it
+
     fg_rsi_html = fg_rsi_fig.to_html(full_html=False, include_plotlyjs="cdn")
     btc_ai_html = btc_ai_fig.to_html(full_html=False, include_plotlyjs=False)
     clean_rsi_html = clean_rsi_fig.to_html(full_html=False, include_plotlyjs=False)
@@ -288,24 +285,9 @@ def build_dashboard_index(fg_rsi_fig: go.Figure,
     with open("index.html", "r", encoding="utf-8") as f:
         content = f.read()
 
-    content = _inject_block(
-        content,
-        "<!-- FG_RSI_START -->",
-        "<!-- FG_RSI_END -->",
-        fg_rsi_html,
-    )
-    content = _inject_block(
-        content,
-        "<!-- BTC_AI_START -->",
-        "<!-- BTC_AI_END -->",
-        btc_ai_html,
-    )
-    content = _inject_block(
-        content,
-        "<!-- CLEAN_RSI_START -->",
-        "<!-- CLEAN_RSI_END -->",
-        clean_rsi_html,
-    )
+    content = _inject_block(content, "<!-- FG_RSI_START -->", "<!-- FG_RSI_END -->", fg_rsi_html)
+    content = _inject_block(content, "<!-- BTC_AI_START -->", "<!-- BTC_AI_END -->", btc_ai_html)
+    content = _inject_block(content, "<!-- CLEAN_RSI_START -->", "<!-- CLEAN_RSI_END -->", clean_rsi_html)
 
     with open("index.html", "w", encoding="utf-8") as f:
         f.write(content)
@@ -321,36 +303,28 @@ def main():
     ensure_charts_dir()
     colors = register_macro_theme()
 
-    # Fetch data
     btc = get_btc_data(start="2018-01-01")
     trends = get_google_ai_trends(start="2018-01-01")
 
-    # Fix MultiIndex issue on GitHub Actions (defensive)
     trends.columns = trends.columns.get_level_values(0)
     trends.index = trends.index.to_flat_index()
     trends.index = pd.to_datetime(trends.index)
     trends.index = trends.index.tz_localize(None)
     trends.index.name = "Date"
 
-    # Align BTC and AI trends
     merged = btc.join(trends, how="inner")
     merged = merged.dropna(subset=["CBBTCUSD", "AI_Searches"])
 
-    # Build charts
     fg_rsi_fig = build_fg_rsi_chart(btc["CBBTCUSD"], colors)
     btc_ai_fig = build_btc_vs_ai_chart(merged, colors)
     clean_rsi_fig = build_clean_rsi_chart(btc["CBBTCUSD"], colors)
 
-    # Optional: still save standalone chart files
     fg_rsi_fig.write_html("charts/fg_rsi.html", include_plotlyjs="cdn", full_html=False)
     btc_ai_fig.write_html("charts/btc_vs_google_ai.html", include_plotlyjs="cdn", full_html=False)
     clean_rsi_fig.write_html("charts/rsi.html", include_plotlyjs="cdn", full_html=False)
 
-    # Build embedded dashboard homepage
     build_dashboard_index(fg_rsi_fig, btc_ai_fig, clean_rsi_fig)
 
 
 if __name__ == "__main__":
     main()
-
-
