@@ -66,6 +66,43 @@ def get_google_ai_trends(start="2018-01-01"):
     trends.index.name = "Date"
 
     return trends
+    
+    def get_china_deflator_from_worldbank():
+    import requests
+    import pandas as pd
+
+    # World Bank API endpoints
+    nominal_url = "https://api.worldbank.org/v2/country/CHN/indicator/NY.GDP.MKTP.KN.ZG?format=json&per_page=500"
+    real_url = "https://api.worldbank.org/v2/country/CHN/indicator/NY.GDP.MKTP.KD.ZG?format=json&per_page=500"
+
+    # Fetch nominal GDP growth (%)
+    nominal_response = requests.get(nominal_url).json()
+    nominal_data = nominal_response[1]
+    nominal_df = pd.DataFrame(nominal_data)[["date", "value"]]
+    nominal_df.columns = ["Year", "Nominal"]
+
+    # Fetch real GDP growth (%)
+    real_response = requests.get(real_url).json()
+    real_data = real_response[1]
+    real_df = pd.DataFrame(real_data)[["date", "value"]]
+    real_df.columns = ["Year", "Real"]
+
+    # Merge the two datasets
+    df = nominal_df.merge(real_df, on="Year", how="inner")
+
+    # Convert types
+    df["Year"] = df["Year"].astype(int)
+    df["Nominal"] = pd.to_numeric(df["Nominal"], errors="coerce")
+    df["Real"] = pd.to_numeric(df["Real"], errors="coerce")
+
+    # Compute GDP deflator = nominal growth - real growth
+    df["Deflator"] = df["Nominal"] - df["Real"]
+
+    # Sort oldest → newest
+    df = df.sort_values("Year")
+
+    # Return only the needed columns
+    return df[["Year", "Deflator"]]
 
 
 # ================================
@@ -217,6 +254,31 @@ def build_btc_vs_ai_chart(merged: pd.DataFrame, colors: dict) -> go.Figure:
 
     return fig
 
+def build_china_deflation_chart(df, colors):
+    fig = go.Figure()
+
+    # Color bars: red for negative, accent color for positive
+    bar_colors = [
+        "#d62728" if val < 0 else colors["accent"]
+        for val in df["Deflator"]
+    ]
+
+    fig.add_trace(go.Bar(
+        x=df["Year"],
+        y=df["Deflator"],
+        marker_color=bar_colors
+    ))
+
+    fig.update_layout(
+        title="China Grapples With Longest Deflation Streak in Decades",
+        yaxis_title="GDP Deflator (%)",
+        template="plotly_white",
+        showlegend=False,
+        margin=dict(l=40, r=40, t=80, b=40)
+    )
+
+    return fig
+
 
 # ================================
 # Main
@@ -249,7 +311,19 @@ def main():
     fg_rsi_fig.write_html("charts/fg_rsi.html", include_plotlyjs="cdn", full_html=False)
     btc_ai_fig.write_html("charts/btc_vs_google_ai.html", include_plotlyjs="cdn", full_html=False)
 
+    # === China GDP Deflator Chart ===
+    china = get_china_deflator_from_worldbank()
+    china_fig = build_china_deflation_chart(china, colors)
+
+    china_fig.write_html(
+        "charts/china_deflation.html",
+        include_plotlyjs="cdn",
+        full_html=False
+    )
+
 
 if __name__ == "__main__":
     main()
+
+
 
