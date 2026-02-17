@@ -252,7 +252,7 @@ def main():
     fg_rsi_fig.write_html("charts/fg_rsi.html", include_plotlyjs="cdn", full_html=False)
     btc_ai_fig.write_html("charts/btc_vs_google_ai.html", include_plotlyjs="cdn", full_html=False)
 
-)
+
 
 
 if __name__ == "__main__":
