@@ -67,85 +67,53 @@ def get_google_ai_trends(start="2018-01-01"):
 
     return trends
     
-def get_china_deflator_from_worldbank(fallback_csv_path="data/china_gdp_deflator.csv"):
-    import time
+def get_china_deflator_from_tradingeconomics(fallback_csv="data/china_gdp_deflator.csv"):
+    import os
     import requests
     import pandas as pd
 
-    nominal_url = "https://api.worldbank.org/v2/country/CHN/indicator/NY.GDP.MKTP.KN.ZG"
-    real_url = "https://api.worldbank.org/v2/country/CHN/indicator/NY.GDP.MKTP.KD.ZG"
-    params = {"format": "json", "per_page": 500}
+    api_key = os.getenv("TRADINGECONOMICS_KEY")
 
-    def fetch_json(url):
-        attempts = 3
-        for i in range(attempts):
-            try:
-                resp = requests.get(url, params=params, timeout=10)
-                if resp.status_code != 200:
-                    # transient server error, retry
-                    time.sleep(1 + i)
-                    continue
-                data = resp.json()
-                return data
-            except requests.RequestException:
-                time.sleep(1 + i)
-                continue
-        return None
-
-    nominal_json = fetch_json(nominal_url)
-    real_json = fetch_json(real_url)
-
-    # Validate structure: World Bank returns [metadata, data_list]
-    def extract_series(json_obj):
-        if not json_obj or not isinstance(json_obj, list):
-            return None
-        if len(json_obj) < 2 or not isinstance(json_obj[1], list):
-            return None
-        return json_obj[1]
-
-    nominal_data = extract_series(nominal_json)
-    real_data = extract_series(real_json)
-
-    # If either series is missing, try fallback CSV
-    if nominal_data is None or real_data is None:
+    # If no API key is set, fall back to local CSV
+    if not api_key:
         try:
-            df_fallback = pd.read_csv(fallback_csv_path)
-            # Expecting Year and Deflator columns in fallback
-            if {"Year", "Deflator"}.issubset(df_fallback.columns):
-                df_fallback["Year"] = df_fallback["Year"].astype(int)
-                df_fallback["Deflator"] = pd.to_numeric(df_fallback["Deflator"], errors="coerce")
-                return df_fallback[["Year", "Deflator"]].sort_values("Year")
-        except FileNotFoundError:
-            pass
+            df = pd.read_csv(fallback_csv)
+            df["Year"] = df["Year"].astype(int)
+            df["Deflator"] = pd.to_numeric(df["Deflator"], errors="coerce")
+            return df.sort_values("Year")
+        except Exception:
+            raise RuntimeError("No API key and fallback CSV missing or invalid.")
 
-        raise RuntimeError(
-            "World Bank API returned no data and no valid fallback CSV found. "
-            "Check network, API availability, or add a fallback CSV at "
-            f"'{fallback_csv_path}'."
-        )
+    url = f"https://api.tradingeconomics.com/historical/country/china/indicator/gdp%20deflator?c={api_key}"
 
-    # Build DataFrames from API lists
-    nominal_df = pd.DataFrame(nominal_data)
-    real_df = pd.DataFrame(real_data)
+    try:
+        resp = requests.get(url, timeout=15)
+        if resp.status_code != 200:
+            raise ValueError("TradingEconomics API returned non-200 status.")
+        data = resp.json()
+    except Exception:
+        # fallback if API fails
+        df = pd.read_csv(fallback_csv)
+        df["Year"] = df["Year"].astype(int)
+        df["Deflator"] = pd.to_numeric(df["Deflator"], errors="coerce")
+        return df.sort_values("Year")
 
-    # Defensive selection of fields
-    if "date" not in nominal_df.columns or "value" not in nominal_df.columns:
-        raise RuntimeError("Unexpected World Bank nominal JSON structure.")
-    if "date" not in real_df.columns or "value" not in real_df.columns:
-        raise RuntimeError("Unexpected World Bank real JSON structure.")
+    # Convert API response to DataFrame
+    df = pd.DataFrame(data)
 
-    nominal_df = nominal_df[["date", "value"]].rename(columns={"date": "Year", "value": "Nominal"})
-    real_df = real_df[["date", "value"]].rename(columns={"date": "Year", "value": "Real"})
+    # Expecting fields: "date", "value"
+    if "date" not in df.columns or "value" not in df.columns:
+        df = pd.read_csv(fallback_csv)
+        df["Year"] = df["Year"].astype(int)
+        df["Deflator"] = pd.to_numeric(df["Deflator"], errors="coerce")
+        return df.sort_values("Year")
 
-    # Merge and compute deflator
-    df = nominal_df.merge(real_df, on="Year", how="inner")
-    df["Year"] = pd.to_numeric(df["Year"], errors="coerce").astype(int)
-    df["Nominal"] = pd.to_numeric(df["Nominal"], errors="coerce")
-    df["Real"] = pd.to_numeric(df["Real"], errors="coerce")
-    df["Deflator"] = df["Nominal"] - df["Real"]
-    df = df.sort_values("Year")
+    df["Year"] = pd.to_datetime(df["date"]).dt.year
+    df["Deflator"] = pd.to_numeric(df["value"], errors="coerce")
 
-    return df[["Year", "Deflator"]]
+    df = df.groupby("Year")["Deflator"].mean().reset_index()
+
+    return df.sort_values("Year")
 
 
 # ================================
