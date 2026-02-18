@@ -278,7 +278,7 @@ def build_btc_vs_sox_chart(btc: pd.DataFrame, sox: pd.DataFrame, colors: dict) -
     print("SOX index levels:", sox.index.nlevels)
     print("BTC index sample:", btc.index[:5])
     print("SOX index sample:", sox.index[:5])
-    print("SOX columns:", sox.columns
+    print("SOX columns:", sox.columns)
           
     df = btc[["CBBTCUSD"]].merge(sox[["SOX"]], left_index=True, right_index=True, how="inner")
 
