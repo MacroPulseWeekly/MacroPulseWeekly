@@ -1,55 +1,79 @@
 <html>
 <head>
-<title>MacroPulseWeekly Dashboard</title>
-<meta charset="UTF-8">
-<style>
-    body {
-        background:#111;
-        color:#fff;
-        font-family:Arial, sans-serif;
-        margin:0;
-        padding:0;
-    }
+    <title>MacroPulseWeekly Dashboard</title>
+    <meta charset="UTF-8">
 
-    /* Navbar */
-    .navbar {
-        width:100%;
-        padding:20px 40px;
-        box-sizing:border-box;
-        text-align:right;
-        background:#111;
-        position:sticky;
-        top:0;
-        z-index:1000;
-    }
-    .navbar a {
-        color:#4DA3FF;
-        margin-left:20px;
-        text-decoration:none;
-        font-size:18px;
-    }
-    .navbar a:hover {
-        text-decoration:underline;
-    }
+    <style>
+        body {
+            background:#111;
+            color:#fff;
+            font-family:Arial, sans-serif;
+            margin:0;
+            padding:0;
+        }
 
- <nav class="navbar">
-    <a href="index.html">Home</a>
-    <a href="#bitcoin-charts">Bitcoin Charts</a>
-    <a href="#global-macro">Global Macro Charts</a>
-    <a href="#ai-charts">AI Charts</a>
-</nav>
+        /* Navbar */
+        .navbar {
+            width:100%;
+            padding:20px 40px;
+            box-sizing:border-box;
+            text-align:right;
+            background:#111;
+            position:sticky;
+            top:0;
+            z-index:1000;
+        }
+        .navbar a {
+            color:#4DA3FF;
+            margin-left:20px;
+            text-decoration:none;
+            font-size:18px;
+        }
+        .navbar a:hover {
+            text-decoration:underline;
+        }
 
-    <section id="bitcoin-charts">
-    <!-- BTC charts -->
-</section>
+        /* Page title */
+        h1 {
+            text-align:left;
+            padding:40px;
+            margin:0;
+            font-size:32px;
+        }
 
-<section id="global-macro">
-    <!-- Macro charts -->
-</section>
+        /* Chart sections */
+        .chart-section {
+            padding:40px;
+            border-bottom:1px solid #333;
+        }
+    </style>
+</head>
 
-<section id="ai-charts">
-    <!-- AI charts -->
-</section>
+<body>
+
+    <!-- NAVBAR (correct location) -->
+    <nav class="navbar">
+        <a href="index.html">Home</a>
+        <a href="#bitcoin-charts">Bitcoin Charts</a>
+        <a href="#global-macro">Global Macro Charts</a>
+        <a href="#ai-charts">AI Charts</a>
+    </nav>
+
+    <!-- PAGE CONTENT -->
+    <section id="bitcoin-charts" class="chart-section">
+        <!-- BTC charts -->
+    </section>
+
+    <section id="global-macro" class="chart-section">
+        <!-- Macro charts -->
+    </section>
+
+    <section id="ai-charts" class="chart-section">
+        <!-- AI charts -->
+    </section>
+
+</body>
+</html>
 
     /* Page title */
     h1 {
