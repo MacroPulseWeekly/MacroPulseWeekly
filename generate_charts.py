@@ -1,7 +1,17 @@
 import os
 from datetime import datetime
 import pandas as pd
-import yfinance as yf
+#import yfinance as yf
+import pandas as pd
+
+def load_full_history_btc():
+    url = "https://coinmetrics.io/newdata/btc.csv"
+    df = pd.read_csv(url, parse_dates=["time"])
+    df = df.rename(columns={"time": "Date", "PriceUSD": "CBBTCUSD"})
+    df = df.set_index("Date")
+    df = df[["CBBTCUSD"]]
+    df = df.dropna()
+    return df
 from pytrends.request import TrendReq
 import plotly.graph_objects as go
 import plotly.io as pio
