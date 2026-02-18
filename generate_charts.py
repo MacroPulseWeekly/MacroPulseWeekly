@@ -170,27 +170,56 @@ def build_btc_vs_sox_chart(btc: pd.DataFrame, sox: pd.DataFrame, colors: dict) -
     return fig
 
 def build_btc_quantile_model(btc: pd.DataFrame, colors: dict) -> go.Figure:
-    # Quantile boundaries (Plan C structure)
-    quantile_breaks = [0.01, 0.15, 0.50, 0.85, 0.95, 0.999]
-    quantile_levels = {q: btc["CBBTCUSD"].quantile(q) for q in quantile_breaks}
+    import numpy as np
+    import plotly.graph_objects as go
 
-    # Compute current quantile using pandas (no SciPy needed)
-    current_q = btc["CBBTCUSD"].rank(pct=True).iloc[-1]
+    # Prepare log-log regression inputs
+    btc = btc.copy()
+    btc["days"] = (btc.index - btc.index.min()).days
+    btc = btc[btc["days"] > 0]  # avoid log(0)
+
+    x = np.log(btc["days"])
+    y = np.log(btc["CBBTCUSD"])
+
+    # Fit linear regression in log-log space
+    b, a = np.polyfit(x, y, 1)  # slope b, intercept a
+
+    # Compute fitted values and residuals
+    btc["log_fitted"] = a + b * x
+    btc["residual"] = y - btc["log_fitted"]
+
+    # Compute percentile of residual (Plan C logic)
+    current_residual = btc["residual"].iloc[-1]
+    current_percentile = (btc["residual"] < current_residual).mean()
+
+    # Convert to 0–100 percentile
+    current_percentile_100 = current_percentile * 100
+
+    # Convert to decile (1–10)
+    current_decile = current_percentile * 10
+
+    # Compute quantile bands based on residuals
+    quantile_breaks = [0.01, 0.05, 0.07, 0.10, 0.20, 0.50, 0.80, 0.90, 0.95, 0.99]
+    quantile_levels = {q: btc["residual"].quantile(q) for q in quantile_breaks}
 
     fig = go.Figure()
 
-    # Add shaded valuation zones
+    # Add shaded valuation zones (Plan C style)
     zone_colors = [
-        "rgba(0, 90, 255, 0.20)",   # Deep Value
-        "rgba(0, 140, 255, 0.20)",  # Discounted
-        "rgba(120, 160, 200, 0.20)",# Premium
-        "rgba(180, 180, 180, 0.20)",# Elevated
-        "rgba(230, 230, 230, 0.20)" # Rare Air
+        "rgba(0, 90, 255, 0.20)",
+        "rgba(0, 140, 255, 0.20)",
+        "rgba(120, 160, 200, 0.20)",
+        "rgba(180, 180, 180, 0.20)",
+        "rgba(230, 230, 230, 0.20)",
+        "rgba(255, 200, 150, 0.20)",
+        "rgba(255, 150, 100, 0.20)",
+        "rgba(255, 100, 80, 0.20)",
+        "rgba(255, 60, 60, 0.20)"
     ]
 
     for i in range(len(quantile_breaks) - 1):
         low = quantile_levels[quantile_breaks[i]]
-        high = quantile_levels[quantile_breaks[i+1]]
+        high = quantile_levels[quantile_breaks[i + 1]]
 
         fig.add_shape(
             type="rect",
@@ -203,30 +232,24 @@ def build_btc_quantile_model(btc: pd.DataFrame, colors: dict) -> go.Figure:
             layer="below"
         )
 
-    # Add BTC price (always orange)
+    # Plot residuals (Plan C uses residuals for quantile zones)
     fig.add_trace(go.Scatter(
         x=btc.index,
-        y=btc["CBBTCUSD"],
-        name="Bitcoin Price",
+        y=btc["residual"],
+        name="Residual (log-log)",
         line=dict(color=colors["mpw_orange"], width=2)
     ))
 
-    # Add quantile lines
-    for q, level in quantile_levels.items():
-        fig.add_trace(go.Scatter(
-            x=btc.index,
-            y=[level] * len(btc),
-            name=f"{int(q*100)}th Percentile",
-            line=dict(color=colors["mpw_blue"], width=1, dash="dot"),
-            opacity=0.5,
-            showlegend=False
-        ))
-
     # Layout
     fig.update_layout(
-        title=f"Bitcoin Quantile Model (Plan C Structure)<br>"
-              f"<span style='font-size:14px; color:#AAAAAA;'>Current Quantile: {current_q:.2f}</span>",
-        yaxis=dict(title="BTC Price (USD)", type="log"),
+        title=(
+            "Bitcoin Quantile Model (Plan C Log-Log Residual Structure)<br>"
+            f"<span style='font-size:14px; color:#AAAAAA;'>"
+            f"Current Percentile: {current_percentile_100:.2f}% "
+            f"(Decile {current_decile:.2f})"
+            "</span>"
+        ),
+        yaxis=dict(title="Residual (log-log)", type="linear"),
         xaxis=dict(tickformat="%Y-%m-%d"),
         template="plotly_dark",
         height=700
