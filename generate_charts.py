@@ -214,110 +214,6 @@ def build_btc_vs_sox_chart(btc: pd.DataFrame, sox: pd.DataFrame, colors: dict) -
     )
     return fig
 
-def build_btc_quantile_model(btc: pd.DataFrame, colors: dict) -> go.Figure:
-    import numpy as np
-    import plotly.graph_objects as go
-
-    # Prepare log-log regression inputs
-    btc = btc.copy()
-    btc["days"] = (btc.index - btc.index.min()).days
-    btc = btc[btc["days"] > 0]  # avoid log(0)
-
-    x = np.log(btc["days"])
-    y = np.log(btc["CBBTCUSD"])
-
-    # Fit linear regression in log-log space
-    slope, intercept = np.polyfit(x, y, 1)
-
-    # Regression line
-    btc["log_fitted"] = intercept + slope * x
-
-    # Residuals
-    btc["residual"] = y - btc["log_fitted"]
-
-    # Compute percentile of residual (Plan C logic)
-    current_residual = btc["residual"].iloc[-1]
-    current_percentile = (btc["residual"] < current_residual).mean()
-    current_percentile_100 = current_percentile * 100
-    current_decile = current_percentile * 10
-
-    # Compute standard deviation of residuals for bands
-    resid_std = btc["residual"].std()
-
-    # Regression bands (±1σ, ±2σ, ±3σ)
-    btc["upper_1"] = btc["log_fitted"] + resid_std
-    btc["upper_2"] = btc["log_fitted"] + 2 * resid_std
-    btc["upper_3"] = btc["log_fitted"] + 3 * resid_std
-
-    btc["lower_1"] = btc["log_fitted"] - resid_std
-    btc["lower_2"] = btc["log_fitted"] - 2 * resid_std
-    btc["lower_3"] = btc["log_fitted"] - 3 * resid_std
-
-    # Convert back to price space
-    for col in ["log_fitted", "upper_1", "upper_2", "upper_3", "lower_1", "lower_2", "lower_3"]:
-        btc[col] = np.exp(btc[col])
-
-    fig = go.Figure()
-
-    # Add regression curve
-    fig.add_trace(go.Scatter(
-        x=btc.index,
-        y=btc["log_fitted"],
-        name="Regression Curve (log-log)",
-        line=dict(color=colors["mpw_blue"], width=2)
-    ))
-
-    # Add regression bands
-    fig.add_trace(go.Scatter(
-        x=btc.index, y=btc["upper_1"],
-        name="+1σ", line=dict(color="rgba(255,255,255,0.4)", dash="dot")
-    ))
-    fig.add_trace(go.Scatter(
-        x=btc.index, y=btc["upper_2"],
-        name="+2σ", line=dict(color="rgba(255,255,255,0.3)", dash="dot")
-    ))
-    fig.add_trace(go.Scatter(
-        x=btc.index, y=btc["upper_3"],
-        name="+3σ", line=dict(color="rgba(255,255,255,0.2)", dash="dot")
-    ))
-
-    fig.add_trace(go.Scatter(
-        x=btc.index, y=btc["lower_1"],
-        name="-1σ", line=dict(color="rgba(255,255,255,0.4)", dash="dot")
-    ))
-    fig.add_trace(go.Scatter(
-        x=btc.index, y=btc["lower_2"],
-        name="-2σ", line=dict(color="rgba(255,255,255,0.3)", dash="dot")
-    ))
-    fig.add_trace(go.Scatter(
-        x=btc.index, y=btc["lower_3"],
-        name="-3σ", line=dict(color="rgba(255,255,255,0.2)", dash="dot")
-    ))
-
-    # Add BTC price
-    fig.add_trace(go.Scatter(
-        x=btc.index,
-        y=btc["CBBTCUSD"],
-        name="Bitcoin Price",
-        line=dict(color=colors["mpw_orange"], width=2)
-    ))
-
-    # Layout
-    fig.update_layout(
-        title=(
-            "Bitcoin Quantile Model (Log-Log Regression)<br>"
-            f"<span style='font-size:14px; color:#AAAAAA;'>"
-            f"Current Residual Percentile: {current_percentile_100:.2f}% "
-            f"(Decile {current_decile:.2f})"
-            "</span>"
-        ),
-        yaxis=dict(title="BTC Price (USD)", type="log"),
-        xaxis=dict(tickformat="%Y-%m-%d"),
-        template="plotly_dark",
-        height=750
-    )
-
-    return fig
 
 # ================================
 # Dashboard index builder
@@ -364,12 +260,12 @@ def main():
     fg_rsi_fig   = build_fg_rsi_chart(btc["CBBTCUSD"], colors)
     btc_ai_fig   = build_btc_vs_ai_chart(merged, colors)
     btc_sox_fig  = build_btc_vs_sox_chart(btc, sox, colors)
-    btc_quantile_fig = build_btc_quantile_model(btc, colors)
+    
 
     fg_rsi_fig.write_html("charts/fg_rsi.html",   include_plotlyjs="cdn", full_html=False)
     btc_ai_fig.write_html("charts/btc_vs_google_ai.html", include_plotlyjs="cdn", full_html=False)
     btc_sox_fig.write_html("charts/btc_sox.html", include_plotlyjs="cdn", full_html=False)
-    btc_quantile_fig.write_html("charts/btc_quantile_model.html", include_plotlyjs="cdn", full_html=False)
+    
 
     build_dashboard_index(fg_rsi_fig, btc_ai_fig, btc_sox_fig)
 
