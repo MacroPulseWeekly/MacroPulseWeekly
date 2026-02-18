@@ -65,17 +65,23 @@ def get_google_ai_trends(start="2018-01-01"):
     return trends
 
 def get_sox_data(start="2018-01-01"):
-    sox = yf.download("^SOX", start=start)
-
-    # Keep only the Close column
+    sox = yf.download("^SOX", start=start, progress=False)  # added progress=False to reduce spam
+    if sox.empty:
+        raise ValueError("No data returned for ^SOX")
+    
+    # Handle possible MultiIndex columns (new yfinance behavior)
+    if isinstance(sox.columns, pd.MultiIndex):
+        # Take just the first level (the price type: Open, High, Low, Close, etc.)
+        sox.columns = sox.columns.get_level_values(0)
+        # OR flatten completely: sox.columns = ['_'.join(col).strip() for col in sox.columns.values]
+    
+    # Now keep only Close and rename
     sox = sox[["Close"]].rename(columns={"Close": "SOX"})
-
-    # FIX: Flatten index to match BTC
-    sox.index = sox.index.to_flat_index()
-    sox.index = pd.to_datetime(sox.index)
-    sox.index = sox.index.tz_localize(None)
+    
+    # Ensure clean datetime index
+    sox.index = pd.to_datetime(sox.index).tz_localize(None)
     sox.index.name = "Date"
-
+    
     return sox
 
 
