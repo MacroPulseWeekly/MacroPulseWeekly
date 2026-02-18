@@ -268,6 +268,72 @@ def build_clean_rsi_chart(btc_close: pd.Series, colors: dict) -> go.Figure:
 
     return fig
 
+def build_btc_vs_sox_chart(btc: pd.DataFrame, sox: pd.DataFrame, colors: dict) -> go.Figure:
+    # Merge BTC + SOX on date
+    df = btc[["CBBTCUSD"]].merge(sox[["SOX"]], left_index=True, right_index=True, how="inner")
+
+    fig = go.Figure()
+
+    # BTC line (left axis)
+    fig.add_trace(go.Scatter(
+        x=df.index,
+        y=df["CBBTCUSD"],
+        mode="lines",
+        name="Bitcoin Price (USD)",
+        line=dict(color=colors["blue"], width=2),
+        yaxis="y1"
+    ))
+
+    # SOX line (right axis)
+    fig.add_trace(go.Scatter(
+        x=df.index,
+        y=df["SOX"],
+        mode="lines",
+        name="SOX Index",
+        line=dict(color=colors["orange"], width=2),
+        yaxis="y2"
+    ))
+
+    # Layout (matches your BTC × AI chart exactly)
+    fig.update_layout(
+        title=dict(
+            text="Bitcoin vs SOX Index<br><span style='font-size:14px; color:#aaa;'>MacroPulseWeekly</span>",
+            x=0.5,
+            xanchor="center"
+        ),
+        paper_bgcolor="#111",
+        plot_bgcolor="#111",
+        font=dict(color="white"),
+        hovermode="x unified",
+        margin=dict(l=60, r=60, t=80, b=40),
+        xaxis=dict(
+            showgrid=True,
+            gridcolor="#333",
+            zeroline=False
+        ),
+        yaxis=dict(
+            title="BTC Price (USD)",
+            showgrid=True,
+            gridcolor="#333",
+            zeroline=False
+        ),
+        yaxis2=dict(
+            title="SOX Index",
+            overlaying="y",
+            side="right",
+            showgrid=False
+        ),
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=1.02,
+            xanchor="right",
+            x=1
+        )
+    )
+
+    return fig
+
 
 # ================================
 # Dashboard index builder
