@@ -5,7 +5,7 @@ import pandas as pd
 import pandas as pd
 
 def load_full_history_btc():
-    url = "https://coinmetrics.io/newdata/btc.csv"
+    url = "https://coinmetrics.io/data/btc.csv"
     df = pd.read_csv(url, parse_dates=["time"])
     df = df.rename(columns={"time": "Date", "PriceUSD": "CBBTCUSD"})
     df = df.set_index("Date")
