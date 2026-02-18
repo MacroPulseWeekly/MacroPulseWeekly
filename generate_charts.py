@@ -174,9 +174,8 @@ def build_btc_quantile_model(btc: pd.DataFrame, colors: dict) -> go.Figure:
     quantile_breaks = [0.01, 0.15, 0.50, 0.85, 0.95, 0.999]
     quantile_levels = {q: btc["CBBTCUSD"].quantile(q) for q in quantile_breaks}
 
-    # Compute current quantile
-    from scipy.stats import percentileofscore
-    current_q = percentileofscore(btc["CBBTCUSD"], btc["CBBTCUSD"].iloc[-1]) / 100
+# Compute current quantile using pandas (no SciPy needed)
+current_q = btc["CBBTCUSD"].rank(pct=True).iloc[-1]
 
     fig = go.Figure()
 
