@@ -29,6 +29,39 @@ jobs:
         run: |
           python3 generate_charts.py
 
+      - name: Inject BTC Quantile Model into index.html
+        run: |
+          python - << 'EOF'
+          from pathlib import Path
+
+          index_path = Path("index.html")
+          quantile_path = Path("charts/btc_quantile_model.html")
+
+          index_html = index_path.read_text(encoding="utf-8")
+          quantile_html = quantile_path.read_text(encoding="utf-8")
+
+          start_marker = "<!-- BTC_QUANTILE_START -->"
+          end_marker = "<!-- BTC_QUANTILE_END -->"
+
+          if start_marker not in index_html or end_marker not in index_html:
+              raise SystemExit("Quantile markers not found in index.html")
+
+          before, rest = index_html.split(start_marker, 1)
+          middle, after = rest.split(end_marker, 1)
+
+          new_index = (
+              before
+              + start_marker
+              + "\n"
+              + quantile_html
+              + "\n"
+              + end_marker
+              + after
+          )
+
+          index_path.write_text(new_index, encoding="utf-8")
+          EOF
+
       - name: Commit updated charts
         run: |
           git config --local user.email "github-actions@github.com"
@@ -36,4 +69,3 @@ jobs:
           git add charts/*.html index.html
           git commit -m "Automated chart update" || echo "No changes to commit"
           git push
-
