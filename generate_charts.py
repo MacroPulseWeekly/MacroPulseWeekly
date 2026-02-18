@@ -319,7 +319,8 @@ def main():
     ensure_charts_dir()
     colors = register_macro_theme()
 
-    btc     = get_btc_data(start="2018-01-01")
+    btc = load_full_history_btc()
+    #btc     = get_btc_data(start="2018-01-01")
     trends  = get_google_ai_trends(start="2018-01-01")
     sox     = get_sox_data(start="2018-01-01")
 
