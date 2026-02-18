@@ -182,77 +182,94 @@ def build_btc_quantile_model(btc: pd.DataFrame, colors: dict) -> go.Figure:
     y = np.log(btc["CBBTCUSD"])
 
     # Fit linear regression in log-log space
-    b, a = np.polyfit(x, y, 1)  # slope b, intercept a
+    slope, intercept = np.polyfit(x, y, 1)
 
-    # Compute fitted values and residuals
-    btc["log_fitted"] = a + b * x
+    # Regression line
+    btc["log_fitted"] = intercept + slope * x
+
+    # Residuals
     btc["residual"] = y - btc["log_fitted"]
 
     # Compute percentile of residual (Plan C logic)
     current_residual = btc["residual"].iloc[-1]
     current_percentile = (btc["residual"] < current_residual).mean()
-
-    # Convert to 0–100 percentile
     current_percentile_100 = current_percentile * 100
-
-    # Convert to decile (1–10)
     current_decile = current_percentile * 10
 
-    # Compute quantile bands based on residuals
-    quantile_breaks = [0.01, 0.05, 0.07, 0.10, 0.20, 0.50, 0.80, 0.90, 0.95, 0.99]
-    quantile_levels = {q: btc["residual"].quantile(q) for q in quantile_breaks}
+    # Compute standard deviation of residuals for bands
+    resid_std = btc["residual"].std()
+
+    # Regression bands (±1σ, ±2σ, ±3σ)
+    btc["upper_1"] = btc["log_fitted"] + resid_std
+    btc["upper_2"] = btc["log_fitted"] + 2 * resid_std
+    btc["upper_3"] = btc["log_fitted"] + 3 * resid_std
+
+    btc["lower_1"] = btc["log_fitted"] - resid_std
+    btc["lower_2"] = btc["log_fitted"] - 2 * resid_std
+    btc["lower_3"] = btc["log_fitted"] - 3 * resid_std
+
+    # Convert back to price space
+    for col in ["log_fitted", "upper_1", "upper_2", "upper_3", "lower_1", "lower_2", "lower_3"]:
+        btc[col] = np.exp(btc[col])
 
     fig = go.Figure()
 
-    # Add shaded valuation zones (Plan C style)
-    zone_colors = [
-        "rgba(0, 90, 255, 0.20)",
-        "rgba(0, 140, 255, 0.20)",
-        "rgba(120, 160, 200, 0.20)",
-        "rgba(180, 180, 180, 0.20)",
-        "rgba(230, 230, 230, 0.20)",
-        "rgba(255, 200, 150, 0.20)",
-        "rgba(255, 150, 100, 0.20)",
-        "rgba(255, 100, 80, 0.20)",
-        "rgba(255, 60, 60, 0.20)"
-    ]
-
-    for i in range(len(quantile_breaks) - 1):
-        low = quantile_levels[quantile_breaks[i]]
-        high = quantile_levels[quantile_breaks[i + 1]]
-
-        fig.add_shape(
-            type="rect",
-            x0=btc.index.min(),
-            x1=btc.index.max(),
-            y0=low,
-            y1=high,
-            fillcolor=zone_colors[i],
-            line=dict(width=0),
-            layer="below"
-        )
-
-    # Plot residuals (Plan C uses residuals for quantile zones)
+    # Add regression curve
     fig.add_trace(go.Scatter(
         x=btc.index,
-        y=btc["residual"],
-        name="Residual (log-log)",
+        y=btc["log_fitted"],
+        name="Regression Curve (log-log)",
+        line=dict(color=colors["mpw_blue"], width=2)
+    ))
+
+    # Add regression bands
+    fig.add_trace(go.Scatter(
+        x=btc.index, y=btc["upper_1"],
+        name="+1σ", line=dict(color="rgba(255,255,255,0.4)", dash="dot")
+    ))
+    fig.add_trace(go.Scatter(
+        x=btc.index, y=btc["upper_2"],
+        name="+2σ", line=dict(color="rgba(255,255,255,0.3)", dash="dot")
+    ))
+    fig.add_trace(go.Scatter(
+        x=btc.index, y=btc["upper_3"],
+        name="+3σ", line=dict(color="rgba(255,255,255,0.2)", dash="dot")
+    ))
+
+    fig.add_trace(go.Scatter(
+        x=btc.index, y=btc["lower_1"],
+        name="-1σ", line=dict(color="rgba(255,255,255,0.4)", dash="dot")
+    ))
+    fig.add_trace(go.Scatter(
+        x=btc.index, y=btc["lower_2"],
+        name="-2σ", line=dict(color="rgba(255,255,255,0.3)", dash="dot")
+    ))
+    fig.add_trace(go.Scatter(
+        x=btc.index, y=btc["lower_3"],
+        name="-3σ", line=dict(color="rgba(255,255,255,0.2)", dash="dot")
+    ))
+
+    # Add BTC price
+    fig.add_trace(go.Scatter(
+        x=btc.index,
+        y=btc["CBBTCUSD"],
+        name="Bitcoin Price",
         line=dict(color=colors["mpw_orange"], width=2)
     ))
 
     # Layout
     fig.update_layout(
         title=(
-            "Bitcoin Quantile Model (Plan C Log-Log Residual Structure)<br>"
+            "Bitcoin Quantile Model (Log-Log Regression)<br>"
             f"<span style='font-size:14px; color:#AAAAAA;'>"
-            f"Current Percentile: {current_percentile_100:.2f}% "
+            f"Current Residual Percentile: {current_percentile_100:.2f}% "
             f"(Decile {current_decile:.2f})"
             "</span>"
         ),
-        yaxis=dict(title="Residual (log-log)", type="linear"),
+        yaxis=dict(title="BTC Price (USD)", type="log"),
         xaxis=dict(tickformat="%Y-%m-%d"),
         template="plotly_dark",
-        height=700
+        height=750
     )
 
     return fig
