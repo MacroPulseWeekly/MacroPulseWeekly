@@ -36,17 +36,20 @@ def load_full_history_btc():
 
         return df
 
-    except Exception as e:
-        print(f"BitcoinCharts failed, falling back to yfinance: {e}")
+# -----------------------------------------
+# 2. Fallback: yfinance (2014 → now)
+# -----------------------------------------
+btc = yf.download("BTC-USD", start="2014-01-01", progress=False)
 
-    # -----------------------------------------
-    # 2. Fallback: yfinance (2014 → now)
-    # -----------------------------------------
-    btc = yf.download("BTC-USD", start="2014-01-01", progress=False)
-    btc = btc.rename(columns={"Close": "CBBTCUSD"})
-    btc.index.name = "Date"
+# Normalize index
+if isinstance(btc.index, pd.MultiIndex):
+    btc.index = btc.index.get_level_values(0)
 
-    return btc[["CBBTCUSD"]]
+btc.index = pd.to_datetime(btc.index).tz_localize(None)
+btc = btc.rename(columns={"Close": "CBBTCUSD"})
+btc.index.name = "Date"
+
+return btc[["CBBTCUSD"]]
 
 from pytrends.request import TrendReq
 import plotly.graph_objects as go
