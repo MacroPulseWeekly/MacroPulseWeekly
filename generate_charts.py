@@ -18,11 +18,14 @@ def load_full_history_btc():
     # Load BTC from yfinance (2014 → now)
     btc = yf.download("BTC-USD", start="2014-01-01", progress=False)
 
-    # Normalize index (fix MultiIndex issues)
+    # --- CRITICAL FIX: Flatten MultiIndex ---
     if isinstance(btc.index, pd.MultiIndex):
         btc.index = btc.index.get_level_values(0)
 
+    # Remove timezone if present
     btc.index = pd.to_datetime(btc.index).tz_localize(None)
+
+    # Rename and clean
     btc = btc.rename(columns={"Close": "CBBTCUSD"})
     btc.index.name = "Date"
 
