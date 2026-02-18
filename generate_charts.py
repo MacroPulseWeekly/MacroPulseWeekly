@@ -1,16 +1,20 @@
 import os
 from datetime import datetime
 import pandas as pd
+import requests
 #import yfinance as yf
-import pandas as pd
+#import pandas as pd
 
 def load_full_history_btc():
-    url = "https://coinmetrics.io/data/btc.csv"
-    df = pd.read_csv(url, parse_dates=["time"])
-    df = df.rename(columns={"time": "Date", "PriceUSD": "CBBTCUSD"})
+    url = "https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=usd&days=max"
+    data = requests.get(url).json()
+
+    prices = data["prices"]  # [timestamp, price]
+
+    df = pd.DataFrame(prices, columns=["timestamp", "CBBTCUSD"])
+    df["Date"] = pd.to_datetime(df["timestamp"], unit="ms")
     df = df.set_index("Date")
     df = df[["CBBTCUSD"]]
-    df = df.dropna()
     return df
 from pytrends.request import TrendReq
 import plotly.graph_objects as go
