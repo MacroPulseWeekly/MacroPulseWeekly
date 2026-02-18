@@ -5,17 +5,35 @@ import requests
 #import yfinance as yf
 #import pandas as pd
 
+import os
+from datetime import datetime
+import pandas as pd
+import requests
+import time
+
 def load_full_history_btc():
-    url = "https://api.coingecko.com/api/v3/coins/bitcoin/market_chart?vs_currency=usd&days=max"
-    data = requests.get(url).json()
+    url = "https://api.coingecko.com/api/v3/coins/bitcoin/market_chart"
+    params = {"vs_currency": "usd", "days": "max"}
 
-    prices = data["prices"]  # [timestamp, price]
+    # Retry up to 5 times in case of rate limits
+    for attempt in range(5):
+        response = requests.get(url, params=params)
+        data = response.json()
 
-    df = pd.DataFrame(prices, columns=["timestamp", "CBBTCUSD"])
-    df["Date"] = pd.to_datetime(df["timestamp"], unit="ms")
-    df = df.set_index("Date")
-    df = df[["CBBTCUSD"]]
-    return df
+        # If the response contains prices, we're good
+        if "prices" in data:
+            prices = data["prices"]
+            df = pd.DataFrame(prices, columns=["timestamp", "CBBTCUSD"])
+            df["Date"] = pd.to_datetime(df["timestamp"], unit="ms")
+            df = df.set_index("Date")
+            df = df[["CBBTCUSD"]]
+            return df
+
+        # If rate-limited, wait and retry
+        time.sleep(2)
+
+    # If all retries fail, raise a clear error
+    raise RuntimeError(f"CoinGecko API failed: {data}")
 from pytrends.request import TrendReq
 import plotly.graph_objects as go
 import plotly.io as pio
