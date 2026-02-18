@@ -66,13 +66,16 @@ def get_google_ai_trends(start="2018-01-01"):
 
 def get_sox_data(start="2018-01-01"):
     sox = yf.download("^SOX", start=start)
+
+    # Keep only the Close column
     sox = sox[["Close"]].rename(columns={"Close": "SOX"})
-    
-    # Clean index (same as BTC + Trends)
+
+    # FIX: Flatten index to match BTC
     sox.index = sox.index.to_flat_index()
     sox.index = pd.to_datetime(sox.index)
     sox.index = sox.index.tz_localize(None)
-    
+    sox.index.name = "Date"
+
     return sox
 
 
