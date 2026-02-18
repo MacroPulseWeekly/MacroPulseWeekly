@@ -12,29 +12,10 @@ import plotly.graph_objects as go
 import plotly.io as pio
 
 def load_full_history_btc():
-    # -----------------------------------------
-    # 1. Try BitcoinCharts (Bitstamp, 2011 → now)
-    # -----------------------------------------
-    try:
-        url = "http://api.bitcoincharts.com/v1/csv/bitstampUSD.csv.gz"
-        r = requests.get(url, timeout=15)
-        compressed = io.BytesIO(r.content)
+    import pandas as pd
+    import yfinance as yf
 
-        with gzip.open(compressed, 'rt') as f:
-            df = pd.read_csv(f, header=None, names=["timestamp", "price", "volume"])
-
-        df["Date"] = pd.to_datetime(df["timestamp"], unit="s")
-        df = df.set_index("Date")[["price"]]
-        df = df.rename(columns={"price": "CBBTCUSD"})
-        df = df.sort_index()
-        return df
-
-    except Exception as e:
-        print(f"BitcoinCharts failed, falling back to yfinance: {e}")
-
-    # -----------------------------------------
-    # 2. Fallback: yfinance (2014 → now)
-    # -----------------------------------------
+    # Load BTC from yfinance (2014 → now)
     btc = yf.download("BTC-USD", start="2014-01-01", progress=False)
 
     # Normalize index (fix MultiIndex issues)
