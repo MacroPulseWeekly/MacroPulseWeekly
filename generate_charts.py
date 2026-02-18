@@ -382,6 +382,7 @@ def main():
 
     btc = get_btc_data(start="2018-01-01")
     trends = get_google_ai_trends(start="2018-01-01")
+    sox = get_sox_data(start="2018-01-01")
 
     trends.columns = trends.columns.get_level_values(0)
     trends.index = trends.index.to_flat_index()
@@ -394,13 +395,13 @@ def main():
 
     fg_rsi_fig = build_fg_rsi_chart(btc["CBBTCUSD"], colors)
     btc_ai_fig = build_btc_vs_ai_chart(merged, colors)
-    clean_rsi_fig = build_clean_rsi_chart(btc["CBBTCUSD"], colors)
+    btc_sox_fig = build_btc_vs_sox_chart(btc, sox, colors)
 
     fg_rsi_fig.write_html("charts/fg_rsi.html", include_plotlyjs="cdn", full_html=False)
     btc_ai_fig.write_html("charts/btc_vs_google_ai.html", include_plotlyjs="cdn", full_html=False)
-    clean_rsi_fig.write_html("charts/rsi.html", include_plotlyjs="cdn", full_html=False)
+    btc_sox_fig.write_html("charts/btc_sox.html", include_plotlyjs="cdn", full_html=False)
 
-    build_dashboard_index(fg_rsi_fig, btc_ai_fig, clean_rsi_fig)
+    build_dashboard_index(fg_rsi_fig, btc_ai_fig, btc_sox_fig)
 
 
 if __name__ == "__main__":
