@@ -75,17 +75,33 @@ def get_btc_data(start="2018-01-01"):
     return btc
 
 def get_google_ai_trends(start="2018-01-01"):
+    from pytrends.request import TrendReq
+    import pandas as pd
+    from datetime import datetime
+
     pytrends = TrendReq(hl="en-US", tz=0)
+
     end_str = datetime.today().strftime("%Y-%m-%d")
     timeframe = f"{start} {end_str}"
+
     pytrends.build_payload(["ai"], timeframe=timeframe, geo="")
     trends = pytrends.interest_over_time()
+
     if trends.empty:
         raise ValueError("Google Trends returned no data for 'ai'.")
+
+    # Rename and clean
     trends = trends.rename(columns={"ai": "AI_Searches"})
     trends = trends.drop(columns=["isPartial"], errors="ignore")
+
+    # --- CRITICAL FIX: Flatten MultiIndex if present ---
+    if isinstance(trends.index, pd.MultiIndex):
+        trends.index = trends.index.get_level_values(0)
+
+    # Normalize index
     trends.index = pd.to_datetime(trends.index).tz_localize(None)
     trends.index.name = "Date"
+
     return trends
 
 def get_sox_data(start="2018-01-01"):
