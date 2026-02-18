@@ -191,7 +191,7 @@ def build_dashboard_index(fg_rsi_fig: go.Figure, btc_ai_fig: go.Figure, btc_sox_
 
     content = _inject_block(content, "<!-- FG_RSI_START -->", "<!-- FG_RSI_END -->", fg_rsi_html)
     content = _inject_block(content, "<!-- BTC_AI_START -->", "<!-- BTC_AI_END -->", btc_ai_html)
-    content = _inject_block(content, "<!-- CLEAN_RSI_START -->", "<!-- CLEAN_RSI_END -->", btc_sox_html)  # Note: using SOX chart here
+    content = _inject_block(content, "<!-- BTC_SOX_START -->", "<!-- BTC_SOX_END -->", btc_sox_html)
 
     with open("index.html", "w", encoding="utf-8") as f:
         f.write(content)
