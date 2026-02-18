@@ -54,14 +54,25 @@ def compute_rsi(series, window: int = 14):
 # ================================
 # Data fetching
 # ================================
-#def get_btc_data(start="2018-01-01"):
-    #btc = yf.download("BTC-USD", start=start, progress=False)
-    #if isinstance(btc.columns, pd.MultiIndex):
-    #    btc.columns = btc.columns.get_level_values(0)
-    #btc = btc[["Close"]].rename(columns={"Close": "CBBTCUSD"})
-    #btc.index = pd.to_datetime(btc.index).tz_localize(None)
-    #btc.index.name = "Date"
-    #return btc
+
+def get_btc_data(start="2018-01-01"):
+    import pandas as pd
+    import yfinance as yf
+
+    btc = yf.download("BTC-USD", start=start, progress=False)
+
+    # Flatten MultiIndex columns if present
+    if isinstance(btc.columns, pd.MultiIndex):
+        btc.columns = btc.columns.get_level_values(0)
+
+    # Keep only Close price and rename
+    btc = btc[["Close"]].rename(columns={"Close": "CBBTCUSD"})
+
+    # Normalize index
+    btc.index = pd.to_datetime(btc.index).tz_localize(None)
+    btc.index.name = "Date"
+
+    return btc
 
 def get_google_ai_trends(start="2018-01-01"):
     pytrends = TrendReq(hl="en-US", tz=0)
