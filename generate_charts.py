@@ -262,9 +262,13 @@ def main():
     colors = register_macro_theme()
 
     btc = load_full_history_btc()
-    #btc     = get_btc_data(start="2018-01-01")
+    btc     = get_btc_data(start="2018-01-01")
     trends  = get_google_ai_trends(start="2018-01-01")
     sox     = get_sox_data(start="2018-01-01")
+
+    print("BTC index levels:", btc.index.nlevels)
+    print("Trends index levels:", trends.index.nlevels)
+    print("SOX index levels:", sox.index.nlevels)
 
     merged = btc.join(trends, how="inner").dropna(subset=["CBBTCUSD", "AI_Searches"])
 
