@@ -2,38 +2,44 @@ import os
 from datetime import datetime
 import pandas as pd
 import requests
-#import yfinance as yf
-#import pandas as pd
-
-import os
-from datetime import datetime
-import pandas as pd
-import requests
+import gzip
+import io
 import time
+import yfinance as yf
+
+from pytrends.request import TrendReq
+import plotly.graph_objects as go
+import plotly.io as pio
 
 def load_full_history_btc():
-    url = "https://api.coingecko.com/api/v3/coins/bitcoin/market_chart"
-    params = {"vs_currency": "usd", "days": "max"}
+    # -----------------------------------------
+    # 1. Try BitcoinCharts (2011 → now)
+    # -----------------------------------------
+    try:
+        url = "http://api.bitcoincharts.com/v1/csv/bitstampUSD.csv.gz"
+        r = requests.get(url, timeout=15)
+        compressed = io.BytesIO(r.content)
 
-    # Retry up to 5 times in case of rate limits
-    for attempt in range(5):
-        response = requests.get(url, params=params)
-        data = response.json()
+        with gzip.open(compressed, 'rt') as f:
+            df = pd.read_csv(f, header=None, names=["timestamp", "price", "volume"])
 
-        # If the response contains prices, we're good
-        if "prices" in data:
-            prices = data["prices"]
-            df = pd.DataFrame(prices, columns=["timestamp", "CBBTCUSD"])
-            df["Date"] = pd.to_datetime(df["timestamp"], unit="ms")
-            df = df.set_index("Date")
-            df = df[["CBBTCUSD"]]
-            return df
+        df["Date"] = pd.to_datetime(df["timestamp"], unit="s")
+        df = df.set_index("Date")[["price"]]
+        df = df.rename(columns={"price": "CBBTCUSD"})
+        df = df.sort_index()
+        return df
 
-        # If rate-limited, wait and retry
-        time.sleep(2)
+    except Exception:
+        pass
 
-    # If all retries fail, raise a clear error
-    raise RuntimeError(f"CoinGecko API failed: {data}")
+    # -----------------------------------------
+    # 2. Fallback: yfinance (2014 → now)
+    # -----------------------------------------
+    btc = yf.download("BTC-USD", start="2014-01-01", progress=False)
+    btc = btc.rename(columns={"Close": "CBBTCUSD"})
+    btc.index.name = "Date"
+    return btc[["CBBTCUSD"]]
+
 from pytrends.request import TrendReq
 import plotly.graph_objects as go
 import plotly.io as pio
