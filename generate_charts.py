@@ -169,6 +169,72 @@ def build_btc_vs_sox_chart(btc: pd.DataFrame, sox: pd.DataFrame, colors: dict) -
     )
     return fig
 
+def build_btc_quantile_model(btc: pd.DataFrame, colors: dict) -> go.Figure:
+    # Quantile boundaries (Plan C structure)
+    quantile_breaks = [0.01, 0.15, 0.50, 0.85, 0.95, 0.999]
+    quantile_levels = {q: btc["CBBTCUSD"].quantile(q) for q in quantile_breaks}
+
+    # Compute current quantile
+    from scipy.stats import percentileofscore
+    current_q = percentileofscore(btc["CBBTCUSD"], btc["CBBTCUSD"].iloc[-1]) / 100
+
+    fig = go.Figure()
+
+    # Add shaded valuation zones
+    zone_colors = [
+        "rgba(0, 90, 255, 0.20)",   # Deep Value
+        "rgba(0, 140, 255, 0.20)",  # Discounted
+        "rgba(120, 160, 200, 0.20)",# Premium
+        "rgba(180, 180, 180, 0.20)",# Elevated
+        "rgba(230, 230, 230, 0.20)" # Rare Air
+    ]
+
+    for i in range(len(quantile_breaks) - 1):
+        low = quantile_levels[quantile_breaks[i]]
+        high = quantile_levels[quantile_breaks[i+1]]
+
+        fig.add_shape(
+            type="rect",
+            x0=btc.index.min(),
+            x1=btc.index.max(),
+            y0=low,
+            y1=high,
+            fillcolor=zone_colors[i],
+            line=dict(width=0),
+            layer="below"
+        )
+
+    # Add BTC price (always orange)
+    fig.add_trace(go.Scatter(
+        x=btc.index,
+        y=btc["CBBTCUSD"],
+        name="Bitcoin Price",
+        line=dict(color=colors["mpw_orange"], width=2)
+    ))
+
+    # Add quantile lines
+    for q, level in quantile_levels.items():
+        fig.add_trace(go.Scatter(
+            x=btc.index,
+            y=[level] * len(btc),
+            name=f"{int(q*100)}th Percentile",
+            line=dict(color=colors["mpw_blue"], width=1, dash="dot"),
+            opacity=0.5,
+            showlegend=False
+        ))
+
+    # Layout
+    fig.update_layout(
+        title=f"Bitcoin Quantile Model (Plan C Structure)<br>"
+              f"<span style='font-size:14px; color:#AAAAAA;'>Current Quantile: {current_q:.2f}</span>",
+        yaxis=dict(title="BTC Price (USD)", type="log"),
+        xaxis=dict(tickformat="%Y-%m-%d"),
+        template="plotly_dark",
+        height=700
+    )
+
+    return fig
+
 # ================================
 # Dashboard index builder
 # ================================
