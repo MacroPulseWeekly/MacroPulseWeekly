@@ -110,8 +110,8 @@ def build_fg_rsi_chart(btc_close: pd.Series, colors: dict) -> go.Figure:
 
 def build_btc_vs_ai_chart(merged: pd.DataFrame, colors: dict) -> go.Figure:
     fig = go.Figure()
-    fig.add_trace(go.Scatter(x=merged.index, y=merged["CBBTCUSD"], name="Bitcoin Price", line=dict(color=colors["mpw_blue"], width=2)))
-    fig.add_trace(go.Scatter(x=merged.index, y=merged["AI_Searches"], name="Google AI Trend", line=dict(color=colors["mpw_orange"], width=2), yaxis="y2"))
+    fig.add_trace(go.Scatter(x=merged.index, y=merged["CBBTCUSD"], name="Bitcoin Price", line=dict(color=colors["mpw_orange"], width=2)))
+    fig.add_trace(go.Scatter(x=merged.index, y=merged["AI_Searches"], name="Google AI Trend", line=dict(color=colors["mpw_blue"], width=2), yaxis="y2"))
     fig.update_layout(
         title="Bitcoin vs Google AI Trends<br><span style='font-size:14px; color:#AAAAAA;'>MacroPulseWeekly</span>",
         yaxis=dict(title="BTC Price (USD)"),
@@ -147,11 +147,11 @@ def build_btc_vs_sox_chart(btc: pd.DataFrame, sox: pd.DataFrame, colors: dict) -
     fig = go.Figure()
     fig.add_trace(go.Scatter(
         x=df.index, y=df["CBBTCUSD"], mode="lines", name="Bitcoin Price (USD)",
-        line=dict(color=colors["mpw_blue"], width=2), yaxis="y1"
+        line=dict(color=colors["mpw_orange"], width=2), yaxis="y1"
     ))
     fig.add_trace(go.Scatter(
         x=df.index, y=df["SOX"], mode="lines", name="SOX Index",
-        line=dict(color=colors["mpw_orange"], width=2), yaxis="y2"
+        line=dict(color=colors["mpw_blue"], width=2), yaxis="y2"
     ))
 
     fig.update_layout(
