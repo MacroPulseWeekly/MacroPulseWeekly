@@ -279,10 +279,12 @@ def main():
     fg_rsi_fig   = build_fg_rsi_chart(btc["CBBTCUSD"], colors)
     btc_ai_fig   = build_btc_vs_ai_chart(merged, colors)
     btc_sox_fig  = build_btc_vs_sox_chart(btc, sox, colors)
+    btc_quantile_fig = build_btc_quantile_model(btc, colors)
 
     fg_rsi_fig.write_html("charts/fg_rsi.html",   include_plotlyjs="cdn", full_html=False)
     btc_ai_fig.write_html("charts/btc_vs_google_ai.html", include_plotlyjs="cdn", full_html=False)
     btc_sox_fig.write_html("charts/btc_sox.html", include_plotlyjs="cdn", full_html=False)
+    btc_quantile_fig.write_html("charts/btc_quantile_model.html", include_plotlyjs="cdn", full_html=False)
 
     build_dashboard_index(fg_rsi_fig, btc_ai_fig, btc_sox_fig)
 
