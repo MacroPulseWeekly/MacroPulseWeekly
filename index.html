@@ -13,31 +13,58 @@
         <div class="nav-title">MacroPulseWeekly</div>
 
         <div class="nav-links">
-            <a href="index.html">Home</a>
-            <a href="#bitcoin-charts">Bitcoin Charts</a>
-            <a href="#global-macro">Global Macro Charts</a>
-            <a href="#ai-charts">AI Charts</a>
+
+            <!-- BITCOIN CHARTS DROPDOWN -->
+            <div class="nav-item">
+                <a href="#bitcoin-charts">Bitcoin Charts ▾</a>
+                <div class="dropdown">
+                    <a href="#fg-rsi">FG‑RSI</a>
+                    <a href="#btc-ai">BTC vs Google AI</a>
+                    <a href="#btc-sox">BTC vs SOX Index</a>
+                </div>
+            </div>
+
+            <!-- GLOBAL MACRO DROPDOWN -->
+            <div class="nav-item">
+                <a href="#global-macro">Global Macro Charts ▾</a>
+                <div class="dropdown">
+                    <a href="#sox-index">SOX Index</a>
+                    <a href="#gdp">Global GDP</a>
+                    <a href="#rates">Interest Rates</a>
+                </div>
+            </div>
+
+            <!-- AI CHARTS DROPDOWN -->
+            <div class="nav-item">
+                <a href="#ai-charts">AI Charts ▾</a>
+                <div class="dropdown">
+                    <a href="#ai-searches">AI Search Trends</a>
+                    <a href="#ai-sentiment">AI Sentiment</a>
+                    <a href="#ai-adoption">AI Adoption Metrics</a>
+                </div>
+            </div>
+
         </div>
     </div>
 
+    <!-- PAGE TITLE -->
     <h1>MacroPulseWeekly Dashboard</h1>
 
-    <!-- BITCOIN CHARTS -->
+    <!-- BITCOIN CHARTS SECTION (your 3 existing charts go here) -->
     <section id="bitcoin-charts" class="chart-section">
-        <div id="btc-price"></div>
         <div id="fg-rsi"></div>
         <div id="btc-ai"></div>
         <div id="btc-sox"></div>
     </section>
 
-    <!-- GLOBAL MACRO -->
+    <!-- GLOBAL MACRO SECTION -->
     <section id="global-macro" class="chart-section">
         <div id="sox-index"></div>
         <div id="gdp"></div>
         <div id="rates"></div>
     </section>
 
-    <!-- AI CHARTS -->
+    <!-- AI CHARTS SECTION -->
     <section id="ai-charts" class="chart-section">
         <div id="ai-searches"></div>
         <div id="ai-sentiment"></div>
