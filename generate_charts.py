@@ -246,9 +246,9 @@ def build_dashboard_index(fg_rsi_fig: go.Figure, btc_ai_fig: go.Figure, btc_sox_
     with open("index.html", "r", encoding="utf-8") as f:
         content = f.read()
 
-    content = _inject_block(content, "<!-- FG_RSI_START -->", "<!-- FG_RSI_END -->", fg_rsi_html)
-    content = _inject_block(content, "<!-- BTC_AI_START -->", "<!-- BTC_AI_END -->", btc_ai_html)
-    content = _inject_block(content, "<!-- BTC_SOX_START -->", "<!-- BTC_SOX_END -->", btc_sox_html)
+content = content.replace('<div id="fg-rsi"></div>', f'<div id="fg-rsi">{fg_rsi_html}</div>')
+content = content.replace('<div id="btc-ai"></div>', f'<div id="btc-ai">{btc_ai_html}</div>')
+content = content.replace('<div id="btc-sox"></div>', f'<div id="btc-sox">{btc_sox_html}</div>')
 
     with open("index.html", "w", encoding="utf-8") as f:
         f.write(content)
