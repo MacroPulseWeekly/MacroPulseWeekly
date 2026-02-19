@@ -246,12 +246,14 @@ def build_dashboard_index(fg_rsi_fig: go.Figure, btc_ai_fig: go.Figure, btc_sox_
     with open("index.html", "r", encoding="utf-8") as f:
         content = f.read()
 
-content = content.replace('<div id="fg-rsi"></div>', f'<div id="fg-rsi">{fg_rsi_html}</div>')
-content = content.replace('<div id="btc-ai"></div>', f'<div id="btc-ai">{btc_ai_html}</div>')
-content = content.replace('<div id="btc-sox"></div>', f'<div id="btc-sox">{btc_sox_html}</div>')
+    # Inject into the new ID-based containers
+    content = content.replace('<div id="fg-rsi"></div>', f'<div id="fg-rsi">{fg_rsi_html}</div>')
+    content = content.replace('<div id="btc-ai"></div>', f'<div id="btc-ai">{btc_ai_html}</div>')
+    content = content.replace('<div id="btc-sox"></div>', f'<div id="btc-sox">{btc_sox_html}</div>')
 
     with open("index.html", "w", encoding="utf-8") as f:
         f.write(content)
+
     print("Dashboard index updated with embedded charts.")
 
 # ================================
