@@ -225,82 +225,7 @@ def build_btc_vs_sox_chart(btc: pd.DataFrame, sox: pd.DataFrame, colors: dict) -
     )
     return fig
 
-def build_valuation_floor_chart(btc_df, colors):
-    import pandas as pd
-    import numpy as np
-    import plotly.graph_objects as go
 
-    # Expecting btc_df to contain:
-    # - Realized Cap
-    # - Transfer Volume
-    # - Price (CBBTCUSD)
-
-    df = btc_df.copy()
-
-    # Compute valuation gap
-    df["valuation_gap"] = df["RealizedCapUSD"] - df["TransferVolumeUSD"]
-
-    # Smooth it
-    df["valuation_gap_smooth"] = df["valuation_gap"].rolling(14, min_periods=1).mean()
-
-    # Known BTC bottoms
-    bottom_dates = [
-        "2011-11-18",
-        "2015-01-14",
-        "2018-12-15",
-        "2020-03-13",
-        "2022-11-21",
-    ]
-    bottom_dates = [pd.to_datetime(d) for d in bottom_dates]
-
-    divisors = []
-    for bd in bottom_dates:
-        idx = (df.index - bd).abs().argmin()
-        price_i = df["CBBTCUSD"].iloc[idx]
-        gap_i = df["valuation_gap_smooth"].iloc[idx]
-        if price_i > 0 and gap_i > 0:
-            divisors.append(gap_i / price_i)
-
-    auto_divisor = np.median(divisors)
-    df["floor_model"] = df["valuation_gap_smooth"] / auto_divisor
-
-    # Plot
-    fig = go.Figure()
-
-    fig.add_trace(go.Scatter(
-        x=df.index,
-        y=df["CBBTCUSD"],
-        mode="lines",
-        name="BTC Price",
-        line=dict(color="#F7931A", width=2),
-    ))
-
-    fig.add_trace(go.Scatter(
-        x=df.index,
-        y=df["floor_model"],
-        mode="lines",
-        name="Valuation Floor",
-        line=dict(color="#FFD700", width=2),
-    ))
-
-    fig.add_trace(go.Scatter(
-        x=list(df.index) + list(df.index[::-1]),
-        y=list(df["floor_model"]) + list([df["floor_model"].min()] * len(df))[::-1],
-        fill="toself",
-        fillcolor="rgba(255,215,0,0.12)",
-        line=dict(color="rgba(0,0,0,0)"),
-        showlegend=False,
-    ))
-
-    fig.update_layout(
-        title="BTC Valuation Floor Model (Realized Cap − Transfer Volume)",
-        yaxis=dict(type="log"),
-        plot_bgcolor="#05060A",
-        paper_bgcolor="#05060A",
-        font=dict(color="white"),
-    )
-
-    return fig
 
 
 # ================================
@@ -319,7 +244,7 @@ def build_dashboard_index(
     fg_rsi_fig: go.Figure,
     btc_ai_fig: go.Figure,
     btc_sox_fig: go.Figure,
-    valuation_floor_fig: go.Figure) -> None:
+    
 
     with open("index.html", "r", encoding="utf-8") as f:
         content = f.read()
@@ -355,17 +280,17 @@ def main():
     fg_rsi_fig   = build_fg_rsi_chart(btc["CBBTCUSD"], colors)
     btc_ai_fig   = build_btc_vs_ai_chart(merged, colors)
     btc_sox_fig  = build_btc_vs_sox_chart(btc, sox, colors)
-    valuation_floor_fig = build_valuation_floor_chart(btc, colors)
+    
     
 
     fg_rsi_fig.write_html("charts/fg_rsi.html",   include_plotlyjs="cdn", full_html=False)
     btc_ai_fig.write_html("charts/btc_vs_google_ai.html", include_plotlyjs="cdn", full_html=False)
     btc_sox_fig.write_html("charts/btc_sox.html", include_plotlyjs="cdn", full_html=False)
-    valuation_floor_fig.write_html("charts/btc_valuation_floor_model.html", include_plotlyjs="cdn", full_html=False)
+    
 
     
 
-    build_dashboard_index(fg_rsi_fig, btc_ai_fig, btc_sox_fig, valuation_floor_fig)
+    build_dashboard_index(fg_rsi_fig, btc_ai_fig, btc_sox_fig,)
 
 if __name__ == "__main__":
     main()
