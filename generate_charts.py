@@ -244,7 +244,7 @@ def build_dashboard_index(
     fg_rsi_fig: go.Figure,
     btc_ai_fig: go.Figure,
     btc_sox_fig: go.Figure,
-    
+):
 
     with open("index.html", "r", encoding="utf-8") as f:
         content = f.read()
