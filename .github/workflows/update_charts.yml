@@ -23,7 +23,22 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install yfinance pytrends plotly pandas
+          pip install yfinance pytrends plotly pandas fredapi
+
+          - name: Test FRED API
+  run: |
+    pip install fredapi pandas
+    python3 - << 'EOF'
+from fredapi import Fred
+import os
+
+fred = Fred(api_key=os.environ["FRED_API_KEY"])
+
+print("Testing WALCL...")
+print(fred.get_series("WALCL").head())
+EOF
+  env:
+    FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
 
       - name: Run chart generator
         run: |
