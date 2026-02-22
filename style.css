@@ -9,6 +9,7 @@ h1 {
   text-align: center;
   margin-bottom: 40px;
 }
+
 /* NAVBAR */
 .navbar {
     width: 100%;
@@ -86,5 +87,9 @@ h1 {
     background-color: #222;
 }
 
-
-
+/* ⭐ ADD THIS AT THE VERY BOTTOM ⭐ */
+.chart-section div {
+    margin-bottom: 40px;
+    width: 100%;
+    min-height: 450px;
+}
