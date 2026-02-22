@@ -30,16 +30,16 @@ jobs:
     FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
   run: |
     pip install fredapi pandas
-python3 -c "from fredapi import Fred; import os; fred = Fred(api_key=os.environ['FRED_API_KEY']); print('Testing WALCL...'); print(fred.get_series('WALCL').head())"
+    python3 -c "from fredapi import Fred; import os; fred = Fred(api_key=os.environ['FRED_API_KEY']); print('Testing WALCL...'); print(fred.get_series('WALCL').head())"
 
 - name: Run chart generator
   run: |
     python3 generate_charts.py
 
-      - name: Commit updated charts
-        run: |
-          git config --local user.email "github-actions@github.com"
-          git config --local user.name "github-actions"
-          git add charts/*.html index.html
-          git commit -m "Automated chart update" || echo "No changes to commit"
-          git push
+- name: Commit updated charts
+  run: |
+    git config --local user.email "github-actions@github.com"
+    git config --local user.name "github-actions"
+    git add charts/*.html index.html
+    git commit -m "Automated chart update" || echo "No changes to commit"
+    git push
