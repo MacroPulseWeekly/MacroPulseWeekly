@@ -58,6 +58,13 @@ def get_sox_data(start="2018-01-01"):
     sox.index.name = "Date"
     return sox
 
+def get_btc_data(start="2018-01-01"):
+    btc = yf.download("BTC-USD", start=start, progress=False)
+    btc = btc[["Close"]].rename(columns={"Close": "CBBTCUSD"})
+    btc.index = pd.to_datetime(btc.index).tz_localize(None)
+    btc.index.name = "Date"
+    return btc
+
 # GLI components
 walcl = get_fred_series("WALCL")
 rrp   = get_fred_series("RRPONTSYD")
