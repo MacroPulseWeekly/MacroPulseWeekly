@@ -21,28 +21,20 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install dependencies
-        run: |
-          pip install yfinance pytrends plotly pandas fredapi
-
-          - name: Test FRED API
+- name: Install dependencies
   run: |
-    pip install fredapi pandas
-    python3 - << 'EOF'
-from fredapi import Fred
-import os
+    pip install yfinance pytrends plotly pandas fredapi
 
-fred = Fred(api_key=os.environ["FRED_API_KEY"])
-
-print("Testing WALCL...")
-print(fred.get_series("WALCL").head())
-EOF
+- name: Test FRED API
   env:
     FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
+  run: |
+    pip install fredapi pandas
+python3 -c "from fredapi import Fred; import os; fred = Fred(api_key=os.environ['FRED_API_KEY']); print('Testing WALCL...'); print(fred.get_series('WALCL').head())"
 
-      - name: Run chart generator
-        run: |
-          python3 generate_charts.py
+- name: Run chart generator
+  run: |
+    python3 generate_charts.py
 
       - name: Commit updated charts
         run: |
