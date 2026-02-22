@@ -11,6 +11,9 @@ from pytrends.request import TrendReq
 import plotly.graph_objects as go
 import plotly.io as pio
 
+from fredapi import Fred
+fred = Fred(api_key=os.environ["FRED_API_KEY"])
+
 def load_full_history_btc():
     import pandas as pd
     import yfinance as yf
@@ -50,6 +53,11 @@ def compute_rsi(series, window: int = 14):
     rs = avg_gain / avg_loss.replace(0, float('nan'))
     rsi = 100 - (100 / (1 + rs))
     return rsi
+
+def get_fred_series(series_id: str) -> pd.Series:
+    s = fred.get_series(series_id)
+    s.name = series_id
+    return s
 
 # ================================
 # Data fetching
@@ -114,6 +122,18 @@ def get_sox_data(start="2018-01-01"):
     sox.index = pd.to_datetime(sox.index).tz_localize(None)
     sox.index.name = "Date"
     return sox
+
+walcl = get_fred_series("WALCL")        # Fed balance sheet
+rrp   = get_fred_series("RRPONTSYD")    # Reverse repo
+tga   = get_fred_series("WTREGEN")      # Treasury General Account
+
+gli_raw = pd.concat([walcl, rrp, tga], axis=1).dropna()
+
+gli_z = (gli_raw - gli_raw.mean()) / gli_raw.std()
+
+gli = gli_z.mean(axis=1)
+gli.name = "GLI"
+
 
 # ================================
 # Theme
@@ -244,11 +264,13 @@ def build_dashboard_index(
     fg_rsi_fig: go.Figure,
     btc_ai_fig: go.Figure,
     btc_sox_fig: go.Figure,
+    fig_gli: go.Figure,
 ):
     # Convert figures to HTML
     fg_rsi_html = fg_rsi_fig.to_html(include_plotlyjs="cdn", full_html=False)
     btc_ai_html = btc_ai_fig.to_html(include_plotlyjs="cdn", full_html=False)
     btc_sox_html = btc_sox_fig.to_html(include_plotlyjs="cdn", full_html=False)
+    gli_html = fig_gli.to_html(include_plotlyjs="cdn", full_html=False)
 
     # Load template
     with open("index.html", "r", encoding="utf-8") as f:
@@ -258,6 +280,7 @@ def build_dashboard_index(
     content = content.replace('<div id="fg-rsi"></div>', f'<div id="fg-rsi">{fg_rsi_html}</div>')
     content = content.replace('<div id="btc-ai"></div>', f'<div id="btc-ai">{btc_ai_html}</div>')
     content = content.replace('<div id="btc-sox"></div>', f'<div id="btc-sox">{btc_sox_html}</div>')
+    content = content.replace('<div id="gli"></div>', f'<div id="gli">{gli_html}</div>')
 
     # Save output
     with open("index.html", "w", encoding="utf-8") as f:
@@ -286,17 +309,41 @@ def main():
     fg_rsi_fig   = build_fg_rsi_chart(btc["CBBTCUSD"], colors)
     btc_ai_fig   = build_btc_vs_ai_chart(merged, colors)
     btc_sox_fig  = build_btc_vs_sox_chart(btc, sox, colors)
-    
-    
 
-    fg_rsi_fig.write_html("charts/fg_rsi.html",   include_plotlyjs="cdn", full_html=False)
+    # ================================
+    # GLI Chart
+    # ================================
+    fig_gli = go.Figure()
+
+    fig_gli.add_trace(go.Scatter(
+        x=gli.index,
+        y=gli.values,
+        name="Global Liquidity Index (v1)",
+        line=dict(color="#F2C94C", width=2)
+    ))
+
+    fig_gli.update_layout(
+        title="Global Liquidity Index (US‑centric v1)",
+        xaxis_title="Date",
+        yaxis_title="Z‑Score",
+        template="plotly_white",
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=1.02,
+            xanchor="right",
+            x=1
+        )
+    )
+
+    # Save all charts
+    fg_rsi_fig.write_html("charts/fg_rsi.html", include_plotlyjs="cdn", full_html=False)
     btc_ai_fig.write_html("charts/btc_vs_google_ai.html", include_plotlyjs="cdn", full_html=False)
     btc_sox_fig.write_html("charts/btc_sox.html", include_plotlyjs="cdn", full_html=False)
-    
+    fig_gli.write_html("charts/gli.html", include_plotlyjs="cdn", full_html=False)
 
-    
-
-    build_dashboard_index(fg_rsi_fig, btc_ai_fig, btc_sox_fig,)
+    # Update homepage
+    build_dashboard_index(fg_rsi_fig, btc_ai_fig, btc_sox_fig, fig_gli)
 
 if __name__ == "__main__":
     main()
