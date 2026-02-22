@@ -33,6 +33,8 @@ jobs:
           python3 -c "from fredapi import Fred; import os; fred = Fred(api_key=os.environ['FRED_API_KEY']); print('Testing WALCL...'); print(fred.get_series('WALCL').head())"
 
       - name: Run chart generator
+        env:
+          FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
         run: |
           python3 generate_charts.py
 
