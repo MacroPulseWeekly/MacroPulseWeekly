@@ -44,11 +44,22 @@ def get_google_ai_trends(start="2018-01-01"):
     timeframe = f"{start} {end_str}"
     pytrends.build_payload(["ai"], timeframe=timeframe, geo="")
     trends = pytrends.interest_over_time()
+    
     if trends.empty:
         raise ValueError("Google Trends returned no data for 'ai'.")
+    
+    # Rename and clean columns
     trends = trends.rename(columns={"ai": "AI_Searches"}).drop(columns=["isPartial"], errors="ignore")
+    
+    # CRITICAL: Flatten MultiIndex if present (common in recent pytrends)
+    if isinstance(trends.index, pd.MultiIndex):
+        trends = trends.reset_index(level=1, drop=True)  # Drop the extra keyword/geo level
+        # Or alternatively: trends.index = trends.index.get_level_values(0)
+    
+    # Ensure it's a clean DatetimeIndex
     trends.index = pd.to_datetime(trends.index).tz_localize(None)
     trends.index.name = "Date"
+    
     return trends
 
 def get_sox_data(start="2018-01-01"):
