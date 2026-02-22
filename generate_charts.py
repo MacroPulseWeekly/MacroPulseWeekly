@@ -266,17 +266,17 @@ def build_dashboard_index(
     btc_sox_fig: go.Figure,
     fig_gli: go.Figure,
 ):
-    # Convert figures to HTML
-    fg_rsi_html = fg_rsi_fig.to_html(include_plotlyjs="cdn", full_html=False)
-    btc_ai_html = btc_ai_fig.to_html(include_plotlyjs="cdn", full_html=False)
-    btc_sox_html = btc_sox_fig.to_html(include_plotlyjs="cdn", full_html=False)
-    gli_html = fig_gli.to_html(include_plotlyjs="cdn", full_html=False)
+# Convert figures to HTML
+fg_rsi_html = fg_rsi_fig.to_html(include_plotlyjs="cdn", full_html=False)
+btc_ai_html = btc_ai_fig.to_html(include_plotlyjs="cdn", full_html=False)
+btc_sox_html = btc_sox_fig.to_html(include_plotlyjs="cdn", full_html=False)
+gli_html = fig_gli.to_html(include_plotlyjs="cdn", full_html=False)
 
 # Load CLEAN template
 with open("template.html", "r", encoding="utf-8") as f:
     content = f.read()
 
-# Replace placeholders
+# Replacement Block
 content = content.replace('<div id="fg-rsi"></div>', f'<div id="fg-rsi">{fg_rsi_html}</div>')
 content = content.replace('<div id="btc-ai"></div>', f'<div id="btc-ai">{btc_ai_html}</div>')
 content = content.replace('<div id="btc-sox"></div>', f'<div id="btc-sox">{btc_sox_html}</div>')
