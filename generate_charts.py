@@ -272,21 +272,21 @@ def build_dashboard_index(
     btc_sox_html = btc_sox_fig.to_html(include_plotlyjs="cdn", full_html=False)
     gli_html = fig_gli.to_html(include_plotlyjs="cdn", full_html=False)
 
-    # Load template
-    with open("index.html", "r", encoding="utf-8") as f:
-        content = f.read()
+# Load CLEAN template
+with open("template.html", "r", encoding="utf-8") as f:
+    content = f.read()
 
-    # Replace placeholders
-    content = content.replace('<div id="fg-rsi"></div>', f'<div id="fg-rsi">{fg_rsi_html}</div>')
-    content = content.replace('<div id="btc-ai"></div>', f'<div id="btc-ai">{btc_ai_html}</div>')
-    content = content.replace('<div id="btc-sox"></div>', f'<div id="btc-sox">{btc_sox_html}</div>')
-    content = content.replace('<div id="gli"></div>', f'<div id="gli">{gli_html}</div>')
+# Replace placeholders
+content = content.replace('<div id="fg-rsi"></div>', f'<div id="fg-rsi">{fg_rsi_html}</div>')
+content = content.replace('<div id="btc-ai"></div>', f'<div id="btc-ai">{btc_ai_html}</div>')
+content = content.replace('<div id="btc-sox"></div>', f'<div id="btc-sox">{btc_sox_html}</div>')
+content = content.replace('<div id="gli"></div>', f'<div id="gli">{gli_html}</div>')
 
-    # Save output
-    with open("index.html", "w", encoding="utf-8") as f:
-        f.write(content)
+# Save output
+with open("index.html", "w", encoding="utf-8") as f:
+    f.write(content)
 
-    print("Dashboard index updated with embedded charts.")
+print("Dashboard index updated with embedded charts.")
 
 # ================================
 # Main
