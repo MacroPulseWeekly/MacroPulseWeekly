@@ -230,6 +230,20 @@ def main():
     trends = get_google_ai_trends(start="2018-01-01")
     sox = get_sox_data(start="2018-01-01")
 
+    # === DEBUG PRINTS START ===
+    print("=== DEBUG: btc index type and levels ===")
+    print("btc index type:", type(btc.index))
+    print("btc levels:", btc.index.nlevels if isinstance(btc.index, pd.MultiIndex) else "single level")
+    print("btc index sample:", btc.index[:3])
+
+    print("\n=== DEBUG: trends index type and levels ===")
+    print("trends index type:", type(trends.index))
+    print("trends levels:", trends.index.nlevels if isinstance(trends.index, pd.MultiIndex) else "single level")
+    print("trends index sample:", trends.index[:3])
+    print("trends columns:", trends.columns.tolist())
+
+    # === DEBUG PRINTS END ===
+
     merged_ai = btc.join(trends, how="inner").dropna()
 
     fg_rsi_fig   = build_fg_rsi_chart(btc["CBBTCUSD"], colors)
