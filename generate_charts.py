@@ -242,10 +242,21 @@ def main():
     print("trends index sample:", trends.index[:3])
     print("trends columns:", trends.columns.tolist())
 
-    # === DEBUG PRINTS END ===
+# === DEBUG PRINTS END ===  # (keep this if you want, or remove)
 
-    merged_ai = btc.join(trends, how="inner").dropna()
+    # Reset both to columns so we can merge on the 'Date' column explicitly
+    btc_reset = btc.reset_index()
+    trends_reset = trends.reset_index()
 
+    # Merge on the date column (explicit and safe)
+    merged_ai = pd.merge(
+        btc_reset,
+        trends_reset,
+        on="Date",          # merge on the column named 'Date'
+        how="inner"
+    )
+
+    # Now build the charts
     fg_rsi_fig   = build_fg_rsi_chart(btc["CBBTCUSD"], colors)
     btc_ai_fig   = build_btc_vs_ai_chart(merged_ai, colors)
     btc_sox_fig  = build_btc_vs_sox_chart(btc, sox, colors)
