@@ -48,19 +48,21 @@ def get_google_ai_trends(start="2018-01-01"):
     if trends.empty:
         raise ValueError("Google Trends returned no data for 'ai'.")
     
-    # Rename and clean columns
+    # Rename column and drop isPartial if present
     trends = trends.rename(columns={"ai": "AI_Searches"}).drop(columns=["isPartial"], errors="ignore")
     
-    # CRITICAL: Flatten MultiIndex if present (common in recent pytrends)
+    # Force single-level index — this handles any MultiIndex reliably
     if isinstance(trends.index, pd.MultiIndex):
-        trends = trends.reset_index(level=1, drop=True)  # Drop the extra keyword/geo level
-        # Or alternatively: trends.index = trends.index.get_level_values(0)
+        trends = trends.reset_index()                     # Convert to columns
+        trends = trends.set_index("date")                 # Set only date as index
+        trends.index.name = "Date"
+    else:
+        trends.index.name = "Date"
     
-    # Ensure it's a clean DatetimeIndex
+    # Ensure clean datetime, no timezone
     trends.index = pd.to_datetime(trends.index).tz_localize(None)
-    trends.index.name = "Date"
     
-    return trends
+    return trends[["AI_Searches"]]   # Keep only the value column
 
 def get_sox_data(start="2018-01-01"):
     sox = yf.download("^SOX", start=start, progress=False)
