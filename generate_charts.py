@@ -230,6 +230,25 @@ def main():
     trends = get_google_ai_trends(start="2018-01-01")
     sox = get_sox_data(start="2018-01-01")
 
+    # Reset both to columns so we can merge on the 'Date' column explicitly
+    btc_reset = btc.reset_index()
+    trends_reset = trends.reset_index()
+
+    # Ensure both DataFrames have a real 'Date' column
+    if "Date" not in btc_reset.columns:
+        btc_reset = btc_reset.rename(columns={btc_reset.columns[0]: "Date"})
+
+    if "Date" not in trends_reset.columns:
+        trends_reset = trends_reset.rename(columns={trends_reset.columns[0]: "Date"})
+
+    # Merge on the date column (explicit and safe)
+    merged_ai = pd.merge(
+        btc_reset,
+        trends_reset,
+        on="Date",
+        how="inner"
+    )
+
     # === DEBUG PRINTS START ===
     print("=== DEBUG: btc index type and levels ===")
     print("btc index type:", type(btc.index))
@@ -243,25 +262,6 @@ def main():
     print("trends columns:", trends.columns.tolist())
 
 # === DEBUG PRINTS END ===  # (keep this if you want, or remove)
-
-    # Reset both to columns so we can merge on the 'Date' column explicitly
-    btc_reset = btc.reset_index()
-    trends_reset = trends.reset_index()
-
-    # Ensure both DataFrames have a real 'Date' column
-if "Date" not in btc_reset.columns:
-    btc_reset = btc_reset.rename(columns={btc_reset.columns[0]: "Date"})
-
-if "Date" not in trends_reset.columns:
-    trends_reset = trends_reset.rename(columns={trends_reset.columns[0]: "Date"})
-
-    # Merge on the date column (explicit and safe)
-    merged_ai = pd.merge(
-        btc_reset,
-        trends_reset,
-        on="Date",          # merge on the column named 'Date'
-        how="inner"
-    )
 
     # Now build the charts
     fg_rsi_fig   = build_fg_rsi_chart(btc["CBBTCUSD"], colors)
