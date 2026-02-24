@@ -51,18 +51,29 @@ def compute_rsi(series, window: int = 14):
     return 100 - (100 / (1 + rs))
 
 def get_data():
-    # BTC Data
+    # 1. Fetch Bitcoin Price
     btc = yf.download("BTC-USD", start="2018-01-01", progress=False)
+    
+    # FIX: Flatten the MultiIndex columns if they exist
+    if isinstance(btc.columns, pd.MultiIndex):
+        btc.columns = btc.columns.get_level_values(0)
+    
     btc = btc[["Close"]].rename(columns={"Close": "Price"})
     btc.index = pd.to_datetime(btc.index).tz_localize(None)
     
-    # Google Trends Data
+    # 2. Fetch Google Trends for "AI"
     pytrends = TrendReq(hl="en-US", tz=0)
     end_str = datetime.today().strftime("%Y-%m-%d")
     pytrends.build_payload(["ai"], timeframe=f"2018-01-01 {end_str}")
     trends = pytrends.interest_over_time()
-    trends = trends[["ai"]].rename(columns={"ai": "AI_Searches"})
-    trends.index = pd.to_datetime(trends.index).tz_localize(None)
+    
+    # Handle empty trends or weird Index issues
+    if trends.empty:
+        # Fallback empty dataframe to prevent crash
+        trends = pd.DataFrame(columns=["AI_Searches"])
+    else:
+        trends = trends[["ai"]].rename(columns={"ai": "AI_Searches"})
+        trends.index = pd.to_datetime(trends.index).tz_localize(None)
     
     return btc, trends
 
