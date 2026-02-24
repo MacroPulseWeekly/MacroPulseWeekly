@@ -196,26 +196,26 @@ def build_gli_chart(gli: pd.Series, colors: dict) -> go.Figure:
 # ────────────────────────────────────────────────
 
 def build_dashboard_index(figs_dict: dict):
-    # figs_dict = {"fg-rsi": fig, "btc-ai": fig, ...}
     with open("template.html", "r", encoding="utf-8") as f:
         content = f.read()
 
+    # 1. Add the Plotly library ONCE to the top of the file
+    plotly_script = '<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>'
+    content = content.replace('<head>', f'<head>\n{plotly_script}')
+
     for div_id, fig in figs_dict.items():
-        # Use latest CDN + full config for interactivity
+        # 2. Generate snippet WITHOUT including the script again
         html_snippet = fig.to_html(
-            include_plotlyjs="https://cdn.plot.ly/plotly-latest.min.js",
+            include_plotlyjs=False, 
             full_html=False,
             config={'responsive': True, 'displaylogo': False}
         )
-        # Add resize handler
-        html_snippet += add_resize_script(div_id)
-        # Replace exactly
+        
         placeholder = f'<div id="{div_id}"></div>'
         content = content.replace(placeholder, f'<div id="{div_id}">{html_snippet}</div>')
 
     with open("index.html", "w", encoding="utf-8") as f:
         f.write(content)
-    print("index.html updated with interactive charts.")
 
 # ────────────────────────────────────────────────
 # Main Execution
