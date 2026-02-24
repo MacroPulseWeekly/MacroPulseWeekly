@@ -5,8 +5,9 @@ permissions:
 
 on:
   schedule:
+    # Runs every 6 hours
     - cron: '0 */6 * * *'
-  workflow_dispatch:
+  workflow_dispatch: # Allows you to run it manually for testing
 
 jobs:
   build:
@@ -26,10 +27,12 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install plotly yfinance pytrends pandas fredapi requests
+          pip install plotly yfinance pytrends pandas
 
       - name: Run chart generator
         env:
+          # We kept this just in case you add FRED back later, 
+          # but it's not strictly needed for the 2 charts above.
           FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
         run: python generate_charts.py
 
@@ -38,7 +41,10 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           
-          git add charts/*.html index.html || true
-          git diff --staged --quiet && echo "No changes to commit" || git commit -m "Automated chart & index update [$(date +'%Y-%m-%d %H:%M')]"
+          # This specifically adds your two new chart files and the index
+          git add charts/fg_rsi.html charts/btc_ai.html index.html
+          
+          # Only commit if something actually changed
+          git diff --staged --quiet && echo "No changes to commit" || git commit -m "Automated chart update [$(date +'%Y-%m-%d %H:%M')]"
           
           git push origin HEAD
