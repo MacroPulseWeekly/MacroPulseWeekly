@@ -248,6 +248,13 @@ def main():
     btc_reset = btc.reset_index()
     trends_reset = trends.reset_index()
 
+    # Ensure both DataFrames have a real 'Date' column
+if "Date" not in btc_reset.columns:
+    btc_reset = btc_reset.rename(columns={btc_reset.columns[0]: "Date"})
+
+if "Date" not in trends_reset.columns:
+    trends_reset = trends_reset.rename(columns={trends_reset.columns[0]: "Date"})
+
     # Merge on the date column (explicit and safe)
     merged_ai = pd.merge(
         btc_reset,
