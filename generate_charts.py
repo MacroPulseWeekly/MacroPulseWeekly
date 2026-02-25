@@ -1,10 +1,13 @@
 import os
+from fredapi import Fred
 import pandas as pd
 import yfinance as yf
 from pytrends.request import TrendReq
 import plotly.graph_objects as go
 import plotly.io as pio
 from datetime import datetime
+
+fred = Fred(api_key=os.environ.get("FRED_API_KEY"))
 
 # ────────────────────────────────────────────────
 # 1. Setup & Theme
@@ -169,6 +172,7 @@ def main():
     ensure_charts_dir()
     colors = register_macro_theme()
     btc, trends = get_data()
+    
 
     # Build Figures
     fg_rsi_fig = build_fg_rsi_chart(btc["Price"], colors)
