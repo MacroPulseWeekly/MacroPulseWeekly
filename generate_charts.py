@@ -373,17 +373,18 @@ def build_btc_etf_flow_chart(colors: dict) -> go.Figure:
 # 4. Deployment
 # ────────────────────────────────────────────────
 
+# ────────────────────────────────────────────────
+# 4. Deployment
+# ────────────────────────────────────────────────
+
 def build_dashboard_index(figs_dict: dict):
     with open("template.html", "r", encoding="utf-8") as f:
         content = f.read()
 
-    # Load Plotly library ONCE in the head
-    lib_script = '<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>'
-    content = content.replace('</head>', f'{lib_script}\n</head>')
-
     for div_id, fig in figs_dict.items():
-        # Generate snippet for the index page
+        # Generate snippet without the library (template has it)
         snippet = fig.to_html(include_plotlyjs=False, full_html=False, config={'responsive': True})
+        # Find the div and drop the chart inside it
         content = content.replace(f'<div id="{div_id}"></div>', f'<div id="{div_id}">{snippet}</div>')
 
     with open("index.html", "w", encoding="utf-8") as f:
@@ -393,9 +394,8 @@ def main():
     ensure_charts_dir()
     colors = register_macro_theme()
     btc, trends = get_data()
-    
 
-    # Build Figures
+    # Build All Figures
     fg_rsi_fig = build_fg_rsi_chart(btc["Price"], colors)
     btc_ai_fig = build_btc_vs_ai_chart(btc, trends, colors)
     btc_m2_fig = build_btc_m2_chart(btc["Price"], colors)
@@ -405,8 +405,7 @@ def main():
     cu_au_pmi_fig = build_copper_gold_pmi_chart(colors)
     btc_etf_fig = build_btc_etf_flow_chart(colors)
 
-    # 1. Save Standalone HTMLs (For Framer Embedding)
-    # These include the library so they work as individual links
+    # 1. Save Standalone HTMLs (For Framer)
     fg_rsi_fig.write_html("charts/fg_rsi.html", include_plotlyjs="cdn", config={'responsive': True})
     btc_ai_fig.write_html("charts/btc_ai.html", include_plotlyjs="cdn", config={'responsive': True})
     btc_m2_fig.write_html("charts/btc_m2.html", include_plotlyjs="cdn", config={'responsive': True})
@@ -415,16 +414,19 @@ def main():
     copper_gold_fig.write_html("charts/copper_gold.html", include_plotlyjs="cdn", config={'responsive': True})
     cu_au_pmi_fig.write_html("charts/cu_au_pmi.html", include_plotlyjs="cdn")
     btc_etf_fig.write_html("charts/btc_etf_flows.html", include_plotlyjs="cdn")
-    
 
-    # 2. Build the Main Dashboard Index (For GitHub Pages)
+    # 2. Build the Main Dashboard Index (MUST INCLUDE ALL KEYS)
     build_dashboard_index({
-        # ... your other charts ...,
+        "fg-rsi": fg_rsi_fig,
+        "btc-ai": btc_ai_fig,
+        "btc-m2": btc_m2_fig,
+        "net-liq": net_liq_fig,
+        "yield-unemp": yield_unemp_fig,
         "copper-gold": copper_gold_fig,
         "cu-au-pmi": cu_au_pmi_fig,
         "btc-etf-flows": btc_etf_fig
-})
-    print("Update Complete: Charts and Index generated.")
+    })
+    print("Update Complete: 8 Charts and Index generated.")
 
 if __name__ == "__main__":
     main()
