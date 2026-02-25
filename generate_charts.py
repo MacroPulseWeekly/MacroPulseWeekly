@@ -108,26 +108,28 @@ def build_btc_vs_ai_chart(btc: pd.DataFrame, trends: pd.DataFrame, colors: dict)
 
 def build_btc_m2_chart(btc_price: pd.Series, colors: dict) -> go.Figure:
     # 1. Fetch M2 Money Supply from FRED (Series: WM2NS)
-    # This is "M2 Money Stock, Billions of Dollars, Weekly"
     m2_raw = fred.get_series("WM2NS")
     m2_raw.name = "M2_Supply"
     
     # 2. Resample and "Forward Fill"
-    # M2 is weekly, BTC is daily. We fill the daily gaps with the last known M2 value.
     df_m2 = m2_raw.to_frame()
     df_m2.index = pd.to_datetime(df_m2.index).tz_localize(None)
     df_m2 = df_m2.resample('D').ffill()
     
-    # 3. Combine with BTC
-    merged = pd.concat([btc_price, df_m2], axis=1).dropna()
+    # --- ADDED: Shift BTC Price forward by 70 days ---
+    # This aligns past liquidity with future price action
+    lagged_btc = btc_price.shift(70)
+    
+    # 3. Combine with Lagged BTC
+    merged = pd.concat([lagged_btc, df_m2], axis=1).dropna()
 
     # 4. Create the Chart
     fig = go.Figure()
     
-    # Bitcoin Price (Left Axis)
+    # Bitcoin Price (Left Axis) - Notice name change to reflect lag
     fig.add_trace(go.Scatter(
         x=merged.index, y=merged["Price"], 
-        name="Bitcoin Price (USD)",
+        name="BTC Price (70D Lag)", 
         line=dict(color=colors["mpw_orange"], width=2)
     ))
     
@@ -140,8 +142,8 @@ def build_btc_m2_chart(btc_price: pd.Series, colors: dict) -> go.Figure:
     ))
 
     fig.update_layout(
-        title="The Liquidity Wave: BTC vs. M2 Money Supply",
-        yaxis=dict(title="BTC Price", type="log"), # Log scale often looks better for BTC
+        title="Liquidity Wave: BTC (70-Day Lag) vs. M2 Money Supply",
+        yaxis=dict(title="BTC Price (Shifted)", type="log"),
         yaxis2=dict(title="M2 Supply (Billions)", overlaying="y", side="right"),
         hovermode="x unified"
     )
@@ -154,25 +156,43 @@ def build_net_liquidity_chart(btc_price: pd.Series, colors: dict) -> go.Figure:
         "WALCL": fred.get_series("WALCL"),
         "TGA": fred.get_series("WTREGEN"),
         "RRP": fred.get_series("RRPONTSYD")
-    }).ffill() # Fill gaps between different reporting dates
+    }).ffill() 
     
     # 2. Calculate Net Liquidity in Trillions
     net_liq = (df_liq["WALCL"] - df_liq["TGA"] - df_liq["RRP"]) / 1000
     net_liq.name = "Net_Liq"
     net_liq.index = pd.to_datetime(net_liq.index).tz_localize(None)
     
-    # 3. Combine with BTC
-    merged = pd.concat([btc_price, net_liq], axis=1).ffill().dropna()
+    # --- ADDED: Shift BTC Price forward by 70 days ---
+    lagged_btc = btc_price.shift(70)
     
-    # 4. Create Figure (Your existing plotting code is perfect!)
+    # 3. Combine with Lagged BTC
+    merged = pd.concat([lagged_btc, net_liq], axis=1).ffill().dropna()
+    
+    # 4. Create Figure
     fig = go.Figure()
-    fig.add_trace(go.Scatter(x=merged.index, y=merged["Price"], name="BTC Price", line=dict(color=colors["mpw_orange"])))
-    fig.add_trace(go.Scatter(x=merged.index, y=merged["Net_Liq"], name="Net Liquidity", yaxis="y2", line=dict(color=colors["mpw_blue"], dash='dot')))
+    
+    # Update name to reflect the 70D Lag
+    fig.add_trace(go.Scatter(
+        x=merged.index, 
+        y=merged["Price"], 
+        name="BTC Price (70D Lag)", 
+        line=dict(color=colors["mpw_orange"], width=2)
+    ))
+    
+    fig.add_trace(go.Scatter(
+        x=merged.index, 
+        y=merged["Net_Liq"], 
+        name="Net Liquidity", 
+        yaxis="y2", 
+        line=dict(color=colors["mpw_blue"], width=2, dash='dot')
+    ))
+
     fig.update_layout(
-        yaxis=dict(title="BTC Price (Log)", type="log"), 
+        title="Monetary Fuel: BTC (70-Day Lag) vs. Net Liquidity",
+        yaxis=dict(title="BTC Price (Shifted - Log)", type="log"), 
         yaxis2=dict(title="Net Liquidity (Trillions)", overlaying="y", side="right"), 
-        hovermode="x unified", 
-        title="BTC vs Net Liquidity"
+        hovermode="x unified"
     )
     return fig
 # ────────────────────────────────────────────────
