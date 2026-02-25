@@ -219,6 +219,7 @@ def main():
     build_dashboard_index({
         "fg-rsi": fg_rsi_fig,
         "btc-ai": btc_ai_fig,
+        "btc-m2": btc_m2_fig,   
         "net-liq": net_liq_fig  
     })
     print("Update Complete: Charts and Index generated.")
