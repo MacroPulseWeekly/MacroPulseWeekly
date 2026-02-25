@@ -103,6 +103,48 @@ def build_btc_vs_ai_chart(btc: pd.DataFrame, trends: pd.DataFrame, colors: dict)
     )
     return fig
 
+def build_btc_m2_chart(btc_price: pd.Series, colors: dict) -> go.Figure:
+    # 1. Fetch M2 Money Supply from FRED (Series: WM2NS)
+    # This is "M2 Money Stock, Billions of Dollars, Weekly"
+    m2_raw = fred.get_series("WM2NS")
+    m2_raw.name = "M2_Supply"
+    
+    # 2. Resample and "Forward Fill"
+    # M2 is weekly, BTC is daily. We fill the daily gaps with the last known M2 value.
+    df_m2 = m2_raw.to_frame()
+    df_m2.index = pd.to_datetime(df_m2.index).tz_localize(None)
+    df_m2 = df_m2.resample('D').ffill()
+    
+    # 3. Combine with BTC
+    merged = pd.concat([btc_price, df_m2], axis=1).dropna()
+
+    # 4. Create the Chart
+    fig = go.Figure()
+    
+    # Bitcoin Price (Left Axis)
+    fig.add_trace(go.Scatter(
+        x=merged.index, y=merged["Price"], 
+        name="Bitcoin Price (USD)",
+        line=dict(color=colors["mpw_orange"], width=2)
+    ))
+    
+    # M2 Supply (Right Axis)
+    fig.add_trace(go.Scatter(
+        x=merged.index, y=merged["M2_Supply"], 
+        name="US M2 Money Supply",
+        line=dict(color=colors["mpw_blue"], width=2),
+        yaxis="y2"
+    ))
+
+    fig.update_layout(
+        title="The Liquidity Wave: BTC vs. M2 Money Supply",
+        yaxis=dict(title="BTC Price", type="log"), # Log scale often looks better for BTC
+        yaxis2=dict(title="M2 Supply (Billions)", overlaying="y", side="right"),
+        hovermode="x unified"
+    )
+    
+    return fig
+
 # ────────────────────────────────────────────────
 # 4. Deployment
 # ────────────────────────────────────────────────
@@ -131,11 +173,13 @@ def main():
     # Build Figures
     fg_rsi_fig = build_fg_rsi_chart(btc["Price"], colors)
     btc_ai_fig = build_btc_vs_ai_chart(btc, trends, colors)
+    btc_m2_fig = build_btc_m2_chart(btc["Price"], colors)
 
     # 1. Save Standalone HTMLs (For Framer Embedding)
     # These include the library so they work as individual links
     fg_rsi_fig.write_html("charts/fg_rsi.html", include_plotlyjs="cdn", config={'responsive': True})
     btc_ai_fig.write_html("charts/btc_ai.html", include_plotlyjs="cdn", config={'responsive': True})
+    btc_m2_fig.write_html("charts/btc_m2.html", include_plotlyjs="cdn", config={'responsive': True})
 
     # 2. Build the Main Dashboard Index (For GitHub Pages)
     build_dashboard_index({
