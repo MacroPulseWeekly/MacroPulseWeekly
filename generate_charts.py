@@ -308,6 +308,64 @@ def build_copper_gold_ratio_chart(colors: dict) -> go.Figure:
         hovermode="x unified"
     )
     return fig
+
+def build_btc_etf_flow_chart(colors: dict) -> go.Figure:
+    url = "https://bitbo.io/treasuries/etf-flows/"
+    header = {
+      "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.75 Safari/537.36",
+      "X-Requested-With": "XMLHttpRequest"
+    }
+
+    try:
+        # 1. Scrape the table
+        r = requests.get(url, headers=header)
+        tables = pd.read_html(r.text)
+        
+        # Usually, the main flow table is the first one ([0])
+        df = tables[0]
+        
+        # 2. Clean Data: Keep Date and Totals
+        # Bitbo tables often have 'Date' and 'Totals' columns
+        df = df[['Date', 'Totals']].copy()
+        df['Date'] = pd.to_datetime(df['Date'])
+        df = df.sort_values('Date')
+        
+        # Convert 'Totals' to numeric (handling the '$' and 'm' if present)
+        df['Totals'] = pd.to_numeric(df['Totals'].astype(str).str.replace('$', '').str.replace(',', ''), errors='coerce')
+        df = df.dropna()
+
+        # 3. Create the Chart
+        fig = go.Figure()
+        
+        # Bar Chart for Daily Flows
+        fig.add_trace(go.Bar(
+            x=df['Date'], 
+            y=df['Totals'],
+            name="Net Flow (USDm)",
+            marker_color=df['Totals'].apply(lambda x: colors["mpw_blue"] if x > 0 else "#ff4b4b")
+        ))
+
+        # Cumulative Line
+        fig.add_trace(go.Scatter(
+            x=df['Date'], 
+            y=df['Totals'].cumsum(),
+            name="Cumulative Flow",
+            line=dict(color=colors["mpw_orange"], width=2),
+            yaxis="y2"
+        ))
+
+        fig.update_layout(
+            title="Institutional Pulse: Bitcoin Spot ETF Net Flows",
+            yaxis=dict(title="Daily Net Flow ($ Millions)"),
+            yaxis2=dict(title="Cumulative Flow", overlaying="y", side="right"),
+            template="plotly_dark",
+            hovermode="x unified"
+        )
+        return fig
+
+    except Exception as e:
+        print(f"ETF Flow Scraper Failed: {e}")
+        return go.Figure().update_layout(title="ETF Flow Data Temporarily Unavailable")
 # ────────────────────────────────────────────────
 # 4. Deployment
 # ────────────────────────────────────────────────
@@ -342,6 +400,7 @@ def main():
     yield_unemp_fig = build_yield_unemployment_chart(colors)
     copper_gold_fig = build_copper_gold_ratio_chart(colors)
     cu_au_pmi_fig = build_copper_gold_pmi_chart(colors)
+    btc_etf_fig = build_btc_etf_flow_chart(colors)
 
     # 1. Save Standalone HTMLs (For Framer Embedding)
     # These include the library so they work as individual links
@@ -352,13 +411,15 @@ def main():
     yield_unemp_fig.write_html("charts/yield_unemployment.html", include_plotlyjs="cdn", config={'responsive': True})
     copper_gold_fig.write_html("charts/copper_gold.html", include_plotlyjs="cdn", config={'responsive': True})
     cu_au_pmi_fig.write_html("charts/cu_au_pmi.html", include_plotlyjs="cdn")
+    btc_etf_fig.write_html("charts/btc_etf_flows.html", include_plotlyjs="cdn")
     
 
     # 2. Build the Main Dashboard Index (For GitHub Pages)
     build_dashboard_index({
         # ... your other charts ...,
         "copper-gold": copper_gold_fig,
-        "cu-au-pmi": cu_au_pmi_fig
+        "cu-au-pmi": cu_au_pmi_fig,
+        "btc-etf-flows": btc_etf_fig
 })
     print("Update Complete: Charts and Index generated.")
 
