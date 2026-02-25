@@ -27,12 +27,12 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install plotly yfinance pytrends pandas
+          # Added fredapi to this list below
+          pip install plotly yfinance pytrends pandas fredapi
 
       - name: Run chart generator
         env:
-          # We kept this just in case you add FRED back later, 
-          # but it's not strictly needed for the 2 charts above.
+          # Your FRED API Key secret must be named FRED_API_KEY in GitHub Settings
           FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
         run: python generate_charts.py
 
@@ -41,8 +41,8 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           
-          # This specifically adds your two new chart files and the index
-          git add charts/fg_rsi.html charts/btc_ai.html index.html
+          # We use "git add charts/*.html" to grab all charts (RSI, AI, and M2) automatically
+          git add charts/*.html index.html
           
           # Only commit if something actually changed
           git diff --staged --quiet && echo "No changes to commit" || git commit -m "Automated chart update [$(date +'%Y-%m-%d %H:%M')]"
