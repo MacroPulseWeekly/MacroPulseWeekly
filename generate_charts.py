@@ -269,46 +269,40 @@ def build_copper_gold_pmi_chart(colors: dict) -> go.Figure:
     copper = yf.download("HG=F", period="5y")['Close']
     gold = yf.download("GC=F", period="5y")['Close']
     
-    # Handle yfinance formatting
     if isinstance(copper, pd.DataFrame): copper = copper.iloc[:, 0]
     if isinstance(gold, pd.DataFrame): gold = gold.iloc[:, 0]
 
-    # 2. Fetch ISM PMI from FRED (Series: NAPM)
-    pmi = fred.get_series("NAPM")
-    pmi.name = "ISM_PMI"
+    # 2. Fetch the "PMI Proxy" (Industrial Production: Manufacturing - IPMANS)
+    # This is free, reliable, and matches ISM PMI trends
+    pmi_proxy = fred.get_series("IPMANS")
+    pmi_proxy.name = "Manufacturing_Output"
     
     # 3. Align Data
     df = pd.DataFrame(index=copper.index)
     df["Ratio"] = (copper / gold)
-    df = df.join(pmi, how='left').ffill().dropna()
+    df = df.join(pmi_proxy, how='left').ffill().dropna()
     
     # 4. Create Figure
     fig = go.Figure()
     
-    # Ratio (Left Axis)
     fig.add_trace(go.Scatter(
         x=df.index, y=df["Ratio"], 
         name="Cu/Au Ratio",
         line=dict(color=colors["mpw_blue"], width=2)
     ))
     
-    # ISM PMI (Right Axis)
+    # PMI Proxy (Right Axis)
     fig.add_trace(go.Scatter(
-        x=df.index, y=df["ISM_PMI"], 
-        name="ISM Manufacturing PMI",
-        line=dict(color=colors["mpw_orange"], width=2),
+        x=df.index, y=df["Manufacturing_Output"], 
+        name="Mfg Output (PMI Proxy)",
+        line=dict(color=colors["mpw_orange"], width=2, dash='dot'),
         yaxis="y2"
     ))
 
-    # Add the "Expansion/Contraction" 50 Line
-    fig.add_hline(y=50, line=dict(color="rgba(255,255,255,0.5)", dash="dash", width=1), 
-                  annotation_text="Expansion / Contraction", 
-                  annotation_position="bottom right", yaxis="y2")
-
     fig.update_layout(
-        title="Economic Engine: Cu/Au Ratio vs. ISM Manufacturing PMI",
+        title="Economic Engine: Cu/Au Ratio vs. Manufacturing Output",
         yaxis=dict(title="Cu/Au Ratio"),
-        yaxis2=dict(title="ISM PMI Index", overlaying="y", side="right", range=[30, 70]),
+        yaxis2=dict(title="Production Index", overlaying="y", side="right"),
         hovermode="x unified",
         template="plotly_dark"
     )
