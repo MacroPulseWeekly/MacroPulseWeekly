@@ -195,6 +195,47 @@ def build_net_liquidity_chart(btc_price: pd.Series, colors: dict) -> go.Figure:
         hovermode="x unified"
     )
     return fig
+
+def build_yield_unemployment_chart(colors: dict) -> go.Figure:
+    # 1. Fetch Data from FRED
+    # DGS10 = 10-Year Treasury Constant Maturity Rate
+    # UNRATE = Unemployment Rate
+    yield_10y = fred.get_series("DGS10")
+    unemployment = fred.get_series("UNRATE")
+    
+    # 2. Align Data
+    # Unemployment is monthly, Yield is daily. We'll ffill to make them match.
+    df = pd.DataFrame({
+        "Yield_10Y": yield_10y,
+        "Unemployment": unemployment
+    }).ffill().dropna()
+    
+    # 3. Create the Figure
+    fig = go.Figure()
+    
+    # 10-Year Yield (Left Axis)
+    fig.add_trace(go.Scatter(
+        x=df.index, y=df["Yield_10Y"], 
+        name="10-Year Treasury Yield (%)",
+        line=dict(color=colors["mpw_orange"], width=2)
+    ))
+    
+    # Unemployment Rate (Right Axis)
+    fig.add_trace(go.Scatter(
+        x=df.index, y=df["Unemployment"], 
+        name="Unemployment Rate (%)",
+        line=dict(color=colors["mpw_blue"], width=2),
+        yaxis="y2"
+    ))
+
+    fig.update_layout(
+        title="The Economic Cycle: 10Y Yield vs. Unemployment Rate",
+        yaxis=dict(title="Yield (%)"),
+        yaxis2=dict(title="Unemployment (%)", overlaying="y", side="right"),
+        hovermode="x unified"
+    )
+    
+    return fig
 # ────────────────────────────────────────────────
 # 4. Deployment
 # ────────────────────────────────────────────────
@@ -226,6 +267,7 @@ def main():
     btc_ai_fig = build_btc_vs_ai_chart(btc, trends, colors)
     btc_m2_fig = build_btc_m2_chart(btc["Price"], colors)
     net_liq_fig = build_net_liquidity_chart(btc["Price"], colors)
+    yield_unemp_fig = build_yield_unemployment_chart(colors)
 
     # 1. Save Standalone HTMLs (For Framer Embedding)
     # These include the library so they work as individual links
@@ -233,6 +275,7 @@ def main():
     btc_ai_fig.write_html("charts/btc_ai.html", include_plotlyjs="cdn", config={'responsive': True})
     btc_m2_fig.write_html("charts/btc_m2.html", include_plotlyjs="cdn", config={'responsive': True})
     net_liq_fig.write_html("charts/net_liquidity.html", include_plotlyjs="cdn", config={'responsive': True})
+    yield_unemp_fig.write_html("charts/yield_unemployment.html", include_plotlyjs="cdn", config={'responsive': True})
     
 
     # 2. Build the Main Dashboard Index (For GitHub Pages)
@@ -240,8 +283,8 @@ def main():
         "fg-rsi": fg_rsi_fig,
         "btc-ai": btc_ai_fig,
         "btc-m2": btc_m2_fig,   
-        "net-liq": net_liq_fig  
-    })
+        "yield-unemp": yield_unemp_fig
+})
     print("Update Complete: Charts and Index generated.")
 
 if __name__ == "__main__":
