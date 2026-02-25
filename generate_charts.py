@@ -226,20 +226,26 @@ def build_yield_unemployment_chart(colors: dict) -> go.Figure:
 
 def build_copper_gold_ratio_chart(colors: dict) -> go.Figure:
     # 1. Fetch Data
-    # HG=F is Copper Futures, GC=F is Gold Futures
-    copper = yf.download("HG=F", period="5y")["Close"]
-    gold = yf.download("GC=F", period="5y")["Close"]
+    # We use auto_adjust=True and explicitly grab the 'Close' column
+    copper = yf.download("HG=F", period="5y")['Close']
+    gold = yf.download("GC=F", period="5y")['Close']
     
-    # 2. Calculate Ratio
-    # We use a dataframe to ensure the dates match up perfectly
-    df = pd.DataFrame({
-        "Copper": copper,
-        "Gold": gold
-    }).dropna()
+    # 2. Flatten the data (yfinance sometimes returns MultiIndex columns)
+    if isinstance(copper, pd.DataFrame):
+        copper = copper.iloc[:, 0]
+    if isinstance(gold, pd.DataFrame):
+        gold = gold.iloc[:, 0]
+
+    # 3. Create the DataFrame explicitly with the indices
+    df = pd.DataFrame(index=copper.index)
+    df["Copper"] = copper
+    df["Gold"] = gold
+    df = df.dropna()
     
+    # 4. Calculate Ratio
     df["Ratio"] = df["Copper"] / df["Gold"]
     
-    # 3. Create the Figure
+    # 5. Create the Figure
     fig = go.Figure()
     
     fig.add_trace(go.Scatter(
@@ -252,7 +258,7 @@ def build_copper_gold_ratio_chart(colors: dict) -> go.Figure:
     fig.update_layout(
         title="Economic Barometer: Copper/Gold Ratio",
         yaxis=dict(title="Ratio Value"),
-        xaxis=dict(title="Date"),
+        template="plotly_dark", # Ensures it matches your theme
         hovermode="x unified"
     )
     
