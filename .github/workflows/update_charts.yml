@@ -31,7 +31,6 @@ jobs:
 
       - name: Run chart generator
         env:
-          # Your FRED API Key secret must be named FRED_API_KEY in GitHub Settings
           FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
         run: python generate_charts.py
 
@@ -40,19 +39,18 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           
-          # Stage the charts directory and index
+          # 1. Pull latest changes to stay in sync
+          git pull origin main
+          
+          # 2. Stage the newly generated files
           git add charts/ index.html
           
-          # Only proceed if there are changes
+          # 3. Only commit if the data has actually changed
           if git diff --staged --quiet; then
             echo "No changes to commit"
           else
             git commit -m "Automated chart update [$(date +'%Y-%m-%d %H:%M')]"
             
-            # Pull any changes you made manually while the action was running
-            # This prevents the "rejected" error
-            git pull --rebase origin main
-            
-            # Push the combined result
-            git push origin HEAD:main
+            # 4. Force push to overwrite conflicts in auto-generated HTML files
+            git push origin HEAD:main --force
           fi
