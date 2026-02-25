@@ -362,7 +362,7 @@ def main():
     # 2. Build the Main Dashboard Index (For GitHub Pages)
     build_dashboard_index({
         # ... your other charts ...,
-        "copper-gold": copper_gold_fig
+        "copper-gold": copper_gold_fig,
         "cu-au-pmi": cu_au_pmi_fig
 })
     print("Update Complete: Charts and Index generated.")
