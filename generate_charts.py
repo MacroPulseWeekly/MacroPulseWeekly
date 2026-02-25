@@ -197,7 +197,7 @@ def build_net_liquidity_chart(btc_price: pd.Series, colors: dict) -> go.Figure:
     return fig
 
 def build_yield_unemployment_chart(colors: dict) -> go.Figure:
-    # 1. Fetch Data
+    # 1. Fetch only what we need
     df = pd.DataFrame({
         "Yield": fred.get_series("DGS10"),
         "Unemployment": fred.get_series("UNRATE"),
@@ -206,40 +206,22 @@ def build_yield_unemployment_chart(colors: dict) -> go.Figure:
 
     fig = go.Figure()
 
-    # 2. Add Recession Shading (The "Logic Gate" Method)
-    # We find where Recession changes from 0 to 1 (Start) and 1 to 0 (End)
-    is_recession = df['Recession'] == 1
-    starts = df.index[is_recession & ~is_recession.shift(1).fillna(False)]
-    ends = df.index[is_recession & ~is_recession.shift(-1).fillna(False)]
+    # 2. Optimized Shading (Single Pass)
+    # This finds the actual start and end dates once
+    is_rec = df['Recession'] == 1
+    starts = df.index[is_rec & ~is_rec.shift(1).fillna(False)]
+    ends = df.index[is_rec & ~is_rec.shift(-1).fillna(False)]
 
-    for s, e in zip(starts, ends):
-        fig.add_vrect(
-            x0=s, x1=e,
-            fillcolor="rgba(200, 200, 200, 0.4)", # Visible but professional gray
-            layer="below", line_width=0
-        )
+    # Draw boxes only if there are fewer than 50 (prevents hanging)
+    if len(starts) < 50:
+        for s, e in zip(starts, ends):
+            fig.add_vrect(x0=s, x1=e, fillcolor="rgba(150,150,150,0.2)", layer="below", line_width=0)
 
-    # 3. Add 10Y Yield (Left Axis)
-    fig.add_trace(go.Scatter(
-        x=df.index, y=df["Yield"], 
-        name="10Y Treasury Yield (%)",
-        line=dict(color=colors["mpw_orange"], width=2)
-    ))
-    
-    # 4. Add Unemployment Rate (Right Axis)
-    fig.add_trace(go.Scatter(
-        x=df.index, y=df["Unemployment"], 
-        name="Unemployment Rate (%)",
-        line=dict(color=colors["mpw_blue"], width=2),
-        yaxis="y2"
-    ))
+    # 3. Add Lines
+    fig.add_trace(go.Scatter(x=df.index, y=df["Yield"], name="10Y Yield", line=dict(color=colors["mpw_orange"])))
+    fig.add_trace(go.Scatter(x=df.index, y=df["Unemployment"], name="Unemployment", yaxis="y2", line=dict(color=colors["mpw_blue"])))
 
-    fig.update_layout(
-        title="Economic Cycle: 10Y Yield vs. Unemployment",
-        yaxis=dict(title="Yield (%)"),
-        yaxis2=dict(title="Unemployment (%)", overlaying="y", side="right"),
-        hovermode="x unified"
-    )
+    fig.update_layout(title="Economic Cycle", yaxis2=dict(overlaying="y", side="right"), hovermode="x unified")
     return fig
 # ────────────────────────────────────────────────
 # 4. Deployment
