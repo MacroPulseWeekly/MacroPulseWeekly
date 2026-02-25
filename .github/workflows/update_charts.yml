@@ -1,221 +1,47 @@
-import os
-import requests
-from fredapi import Fred
-import pandas as pd
-import yfinance as yf
-from pytrends.request import TrendReq
-import plotly.graph_objects as go
-import plotly.io as pio
-from datetime import datetime
+name: Update MacroPulseWeekly Charts
 
-# Initialize FRED (Ensure FRED_API_KEY is in your GitHub Secrets)
-fred = Fred(api_key=os.environ.get("FRED_API_KEY"))
+permissions:
+  contents: write
 
-# ────────────────────────────────────────────────
-# 1. Setup & Theme
-# ────────────────────────────────────────────────
+on:
+  schedule:
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
 
-def ensure_charts_dir():
-    os.makedirs("charts", exist_ok=True)
+jobs:
+  build:
+    runs-on: ubuntu-latest
 
-def register_macro_theme():
-    colors = {
-        "mpw_blue":   "#4DA3FF",
-        "mpw_orange": "#FF8C42",
-        "mpw_green":  "#4CAF50",
-        "mpw_red":    "#FF5252",
-        "mpw_gray":   "#AAAAAA",
-    }
-    macro_theme = {
-        "layout": {
-            "paper_bgcolor": "#111111",
-            "plot_bgcolor":  "#111111",
-            "font": {"family": "Arial", "color": "#FFFFFF", "size": 14},
-            "title": {"font": {"size": 22, "color": "#FFFFFF"}, "x": 0.5},
-            "xaxis": {"gridcolor": "#333333", "showgrid": True},
-            "yaxis": {"gridcolor": "#333333", "showgrid": True},
-            "margin": {"l": 50, "r": 50, "t": 80, "b": 50},
-            "hovermode": "x unified",
-        }
-    }
-    pio.templates["macro_pulse"] = macro_theme
-    pio.templates.default = "macro_pulse"
-    return colors
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-# ────────────────────────────────────────────────
-# 2. Data Fetching & Math
-# ────────────────────────────────────────────────
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
 
-def compute_rsi(series, window: int = 14):
-    delta = series.diff()
-    gain = delta.clip(lower=0)
-    loss = -delta.clip(upper=0)
-    avg_gain = gain.rolling(window=window, min_periods=window).mean()
-    avg_loss = loss.rolling(window=window, min_periods=window).mean()
-    rs = avg_gain / avg_loss.replace(0, float('nan'))
-    return 100 - (100 / (1 + rs))
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install plotly yfinance pytrends pandas fredapi lxml beautifulsoup4 requests
 
-def get_data():
-    btc = yf.download("BTC-USD", start="2018-01-01", progress=False)
-    if isinstance(btc.columns, pd.MultiIndex):
-        btc.columns = btc.columns.get_level_values(0)
-    
-    btc = btc[["Close"]].rename(columns={"Close": "Price"})
-    btc.index = pd.to_datetime(btc.index).tz_localize(None)
-    
-    pytrends = TrendReq(hl="en-US", tz=0)
-    end_str = datetime.today().strftime("%Y-%m-%d")
-    try:
-        pytrends.build_payload(["ai"], timeframe=f"2018-01-01 {end_str}")
-        trends = pytrends.interest_over_time()
-        if trends.empty:
-            trends = pd.DataFrame(columns=["AI_Searches"])
-        else:
-            trends = trends[["ai"]].rename(columns={"ai": "AI_Searches"})
-            trends.index = pd.to_datetime(trends.index).tz_localize(None)
-    except:
-        trends = pd.DataFrame(columns=["AI_Searches"])
-    
-    return btc, trends
+      - name: Run chart generator
+        env:
+          FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
+        run: python generate_charts.py
 
-# ────────────────────────────────────────────────
-# 3. Chart Builders
-# ────────────────────────────────────────────────
-
-def build_fg_rsi_chart(btc_price: pd.Series, colors: dict) -> go.Figure:
-    rsi = compute_rsi(btc_price)
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(x=rsi.index, y=rsi, name="RSI", line=dict(color=colors["mpw_blue"])))
-    fig.add_hline(y=70, line=dict(color=colors["mpw_red"], dash="dash"))
-    fig.add_hline(y=30, line=dict(color=colors["mpw_green"], dash="dash"))
-    fig.update_layout(title="Bitcoin Fear & Greed RSI")
-    fig.update_yaxes(range=[0, 100])
-    return fig
-
-def build_btc_vs_ai_chart(btc: pd.DataFrame, trends: pd.DataFrame, colors: dict) -> go.Figure:
-    merged = btc.join(trends, how="inner")
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(x=merged.index, y=merged["Price"], name="BTC Price", line=dict(color=colors["mpw_orange"])))
-    fig.add_trace(go.Scatter(x=merged.index, y=merged["AI_Searches"], name="AI Trends", yaxis="y2", line=dict(color=colors["mpw_blue"])))
-    fig.update_layout(
-        title="Bitcoin vs Google AI Trends",
-        yaxis2=dict(overlaying="y", side="right")
-    )
-    return fig
-
-def build_btc_m2_chart(btc_price: pd.Series, colors: dict) -> go.Figure:
-    m2_raw = fred.get_series("WM2NS")
-    df_m2 = m2_raw.to_frame().resample('D').ffill()
-    df_m2.index = pd.to_datetime(df_m2.index).tz_localize(None)
-    lagged_btc = btc_price.shift(70)
-    merged = pd.concat([lagged_btc, df_m2], axis=1).dropna()
-    
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(x=merged.index, y=merged["Price"], name="BTC (70D Lag)", line=dict(color=colors["mpw_orange"])))
-    fig.add_trace(go.Scatter(x=merged.index, y=merged[0], name="M2 Supply", yaxis="y2", line=dict(color=colors["mpw_blue"])))
-    fig.update_layout(title="BTC (70-Day Lag) vs. M2 Supply", yaxis2=dict(overlaying="y", side="right"), yaxis=dict(type="log"))
-    return fig
-
-def build_net_liquidity_chart(btc_price: pd.Series, colors: dict) -> go.Figure:
-    df_liq = pd.DataFrame({"WALCL": fred.get_series("WALCL"), "TGA": fred.get_series("WTREGEN"), "RRP": fred.get_series("RRPONTSYD")}).ffill()
-    net_liq = (df_liq["WALCL"] - df_liq["TGA"] - df_liq["RRP"]) / 1000
-    lagged_btc = btc_price.shift(70)
-    merged = pd.concat([lagged_btc, net_liq], axis=1).dropna()
-
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(x=merged.index, y=merged["Price"], name="BTC (70D Lag)", line=dict(color=colors["mpw_orange"])))
-    fig.add_trace(go.Scatter(x=merged.index, y=merged[0], name="Net Liq", yaxis="y2", line=dict(color=colors["mpw_blue"], dash='dot')))
-    fig.update_layout(title="BTC (70-Day Lag) vs. Net Liquidity", yaxis2=dict(overlaying="y", side="right"), yaxis=dict(type="log"))
-    return fig
-
-def build_yield_unemployment_chart(colors: dict) -> go.Figure:
-    df = pd.DataFrame({"Yield": fred.get_series("DGS10"), "Unemployment": fred.get_series("UNRATE")}).ffill().dropna()
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(x=df.index, y=df["Yield"], name="10Y Yield", line=dict(color=colors["mpw_orange"])))
-    fig.add_trace(go.Scatter(x=df.index, y=df["Unemployment"], name="Unemployment", yaxis="y2", line=dict(color=colors["mpw_blue"])))
-    fig.update_layout(title="10Y Yield vs. Unemployment", yaxis2=dict(overlaying="y", side="right"))
-    return fig
-
-def build_copper_gold_ratio_chart(colors: dict) -> go.Figure:
-    copper = yf.download("HG=F", period="20y")['Close']
-    gold = yf.download("GC=F", period="20y")['Close']
-    if isinstance(copper, pd.DataFrame): copper = copper.iloc[:, 0]
-    if isinstance(gold, pd.DataFrame): gold = gold.iloc[:, 0]
-    ratio = copper / gold
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(x=ratio.index, y=ratio, name="Cu/Au Ratio", line=dict(color=colors["mpw_blue"])))
-    fig.update_layout(title="20-Year Copper/Gold Ratio")
-    return fig
-
-def build_copper_gold_pmi_chart(colors: dict) -> go.Figure:
-    copper = yf.download("HG=F", period="20y")['Close']
-    gold = yf.download("GC=F", period="20y")['Close']
-    if isinstance(copper, pd.DataFrame): copper = copper.iloc[:, 0]
-    if isinstance(gold, pd.DataFrame): gold = gold.iloc[:, 0]
-    pmi_proxy = fred.get_series("IPMAN").ffill()
-    df = pd.DataFrame(index=copper.index)
-    df["Ratio"] = copper / gold
-    df = df.join(pmi_proxy, how='left').ffill()
-    df["Smooth"] = df[0].rolling(window=90).mean()
-    df = df.dropna()
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(x=df.index, y=df["Ratio"], name="Cu/Au Ratio", line=dict(color=colors["mpw_blue"])))
-    fig.add_trace(go.Scatter(x=df.index, y=df["Smooth"], name="Mfg Output (Smooth)", yaxis="y2", line=dict(color=colors["mpw_orange"], shape='spline')))
-    fig.update_layout(title="Cu/Au vs. Smoothed Manufacturing", yaxis2=dict(overlaying="y", side="right"))
-    return fig
-
-def build_btc_etf_flow_chart(colors: dict) -> go.Figure:
-    url = "https://bitbo.io/treasuries/etf-flows/"
-    header = {"User-Agent": "Mozilla/5.0"}
-    try:
-        r = requests.get(url, headers=header)
-        df = pd.read_html(r.text)[0]
-        df = df[['Date', 'Totals']].copy()
-        df['Date'] = pd.to_datetime(df['Date'])
-        df['Totals'] = pd.to_numeric(df['Totals'].astype(str).str.replace('$', '').str.replace(',', ''), errors='coerce')
-        df = df.dropna().sort_values('Date')
-        fig = go.Figure()
-        fig.add_trace(go.Bar(x=df['Date'], y=df['Totals'], name="Daily Flow", marker_color=colors["mpw_blue"]))
-        fig.add_trace(go.Scatter(x=df['Date'], y=df['Totals'].cumsum(), name="Cumulative", yaxis="y2", line=dict(color=colors["mpw_orange"])))
-        fig.update_layout(title="BTC ETF Flows", yaxis2=dict(overlaying="y", side="right"))
-        return fig
-    except:
-        return go.Figure().update_layout(title="ETF Flows Unavailable")
-
-# ────────────────────────────────────────────────
-# 4. Deployment
-# ────────────────────────────────────────────────
-
-def build_dashboard_index(figs_dict: dict):
-    with open("template.html", "r", encoding="utf-8") as f:
-        content = f.read()
-    for div_id, fig in figs_dict.items():
-        snippet = fig.to_html(include_plotlyjs=False, full_html=False, config={'responsive': True})
-        content = content.replace(f'<div id="{div_id}"></div>', f'<div id="{div_id}">{snippet}</div>')
-    with open("index.html", "w", encoding="utf-8") as f:
-        f.write(content)
-
-def main():
-    ensure_charts_dir()
-    colors = register_macro_theme()
-    btc, trends = get_data()
-    
-    charts = {
-        "fg-rsi": build_fg_rsi_chart(btc["Price"], colors),
-        "btc-ai": build_btc_vs_ai_chart(btc, trends, colors),
-        "btc-m2": build_btc_m2_chart(btc["Price"], colors),
-        "net-liq": build_net_liquidity_chart(btc["Price"], colors),
-        "yield-unemp": build_yield_unemployment_chart(colors),
-        "copper-gold": build_copper_gold_ratio_chart(colors),
-        "cu-au-pmi": build_copper_gold_pmi_chart(colors),
-        "btc-etf-flows": build_btc_etf_flow_chart(colors)
-    }
-
-    for name, fig in charts.items():
-        fig.write_html(f"charts/{name.replace('-', '_')}.html", include_plotlyjs="cdn")
-    
-    build_dashboard_index(charts)
-    print("Dashboard Update Complete.")
-
-if __name__ == "__main__":
-    main()
+      - name: Commit and push updated charts & index
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git pull origin main
+          git add charts/ index.html
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Automated chart update [$(date +'%Y-%m-%d %H:%M')]"
+            git push origin HEAD:main --force
+          fi
