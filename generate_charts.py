@@ -148,6 +148,33 @@ def build_btc_m2_chart(btc_price: pd.Series, colors: dict) -> go.Figure:
     
     return fig
 
+def build_net_liquidity_chart(btc_price: pd.Series, colors: dict) -> go.Figure:
+    # 1. Fetch and align FRED data
+    df_liq = pd.DataFrame({
+        "WALCL": fred.get_series("WALCL"),
+        "TGA": fred.get_series("WTREGEN"),
+        "RRP": fred.get_series("RRPONTSYD")
+    }).ffill() # Fill gaps between different reporting dates
+    
+    # 2. Calculate Net Liquidity in Trillions
+    net_liq = (df_liq["WALCL"] - df_liq["TGA"] - df_liq["RRP"]) / 1000
+    net_liq.name = "Net_Liq"
+    net_liq.index = pd.to_datetime(net_liq.index).tz_localize(None)
+    
+    # 3. Combine with BTC
+    merged = pd.concat([btc_price, net_liq], axis=1).ffill().dropna()
+    
+    # 4. Create Figure (Your existing plotting code is perfect!)
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=merged.index, y=merged["Price"], name="BTC Price", line=dict(color=colors["mpw_orange"])))
+    fig.add_trace(go.Scatter(x=merged.index, y=merged["Net_Liq"], name="Net Liquidity", yaxis="y2", line=dict(color=colors["mpw_blue"], dash='dot')))
+    fig.update_layout(
+        yaxis=dict(title="BTC Price (Log)", type="log"), 
+        yaxis2=dict(title="Net Liquidity (Trillions)", overlaying="y", side="right"), 
+        hovermode="x unified", 
+        title="BTC vs Net Liquidity"
+    )
+    return fig
 # ────────────────────────────────────────────────
 # 4. Deployment
 # ────────────────────────────────────────────────
@@ -178,17 +205,21 @@ def main():
     fg_rsi_fig = build_fg_rsi_chart(btc["Price"], colors)
     btc_ai_fig = build_btc_vs_ai_chart(btc, trends, colors)
     btc_m2_fig = build_btc_m2_chart(btc["Price"], colors)
+    net_liq_fig = build_net_liquidity_chart(btc["Price"], colors)
 
     # 1. Save Standalone HTMLs (For Framer Embedding)
     # These include the library so they work as individual links
     fg_rsi_fig.write_html("charts/fg_rsi.html", include_plotlyjs="cdn", config={'responsive': True})
     btc_ai_fig.write_html("charts/btc_ai.html", include_plotlyjs="cdn", config={'responsive': True})
     btc_m2_fig.write_html("charts/btc_m2.html", include_plotlyjs="cdn", config={'responsive': True})
+    net_liq_fig.write_html("charts/net_liquidity.html", include_plotlyjs="cdn", config={'responsive': True})
+    
 
     # 2. Build the Main Dashboard Index (For GitHub Pages)
     build_dashboard_index({
         "fg-rsi": fg_rsi_fig,
-        "btc-ai": btc_ai_fig
+        "btc-ai": btc_ai_fig,
+        "net-liq": net_liq_fig  
     })
     print("Update Complete: Charts and Index generated.")
 
