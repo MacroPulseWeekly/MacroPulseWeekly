@@ -225,27 +225,28 @@ def build_yield_unemployment_chart(colors: dict) -> go.Figure:
     return fig
 
 def build_copper_gold_pmi_chart(colors: dict) -> go.Figure:
-    # 1. Fetch Copper and Gold
-    copper = yf.download("HG=F", period="5y")['Close']
-    gold = yf.download("GC=F", period="5y")['Close']
+    # 1. Fetch Copper and Gold - Updated to 20 years
+    # Period options: '10y', '20y', 'max'
+    copper = yf.download("HG=F", period="20y")['Close']
+    gold = yf.download("GC=F", period="20y")['Close']
     
     if isinstance(copper, pd.DataFrame): copper = copper.iloc[:, 0]
     if isinstance(gold, pd.DataFrame): gold = gold.iloc[:, 0]
 
     # 2. Fetch the "PMI Proxy" (Industrial Production: Manufacturing - IPMAN)
-    # IPMAN is a core FRED series and is widely available.
+    # FRED series naturally go back decades, so this will align automatically
     try:
         pmi_proxy = fred.get_series("IPMAN")
         pmi_proxy.name = "Manufacturing_Output"
     except Exception as e:
         print(f"Error fetching IPMAN: {e}")
-        # Fallback to a very common series if IPMAN fails
         pmi_proxy = fred.get_series("INDPRO") 
         pmi_proxy.name = "Industrial_Production"
     
     # 3. Align Data
     df = pd.DataFrame(index=copper.index)
     df["Ratio"] = (copper / gold)
+    # PMI is monthly, so we ffill to match the 20-year daily history
     df = df.join(pmi_proxy, how='left').ffill().dropna()
     
     # 4. Create Figure
@@ -254,19 +255,19 @@ def build_copper_gold_pmi_chart(colors: dict) -> go.Figure:
     fig.add_trace(go.Scatter(
         x=df.index, y=df["Ratio"], 
         name="Cu/Au Ratio",
-        line=dict(color=colors["mpw_blue"], width=2)
+        line=dict(color=colors["mpw_blue"], width=1.5) # Thinner line for long timeframes
     ))
     
     # PMI Proxy (Right Axis)
     fig.add_trace(go.Scatter(
         x=df.index, y=df[pmi_proxy.name], 
         name="Mfg Output (PMI Proxy)",
-        line=dict(color=colors["mpw_orange"], width=2, dash='dot'),
+        line=dict(color=colors["mpw_orange"], width=1.5, dash='dot'),
         yaxis="y2"
     ))
 
     fig.update_layout(
-        title="Economic Engine: Cu/Au Ratio vs. Manufacturing Output",
+        title="20-Year Economic Engine: Cu/Au Ratio vs. Manufacturing Output",
         yaxis=dict(title="Cu/Au Ratio"),
         yaxis2=dict(title="Production Index", overlaying="y", side="right"),
         hovermode="x unified",
