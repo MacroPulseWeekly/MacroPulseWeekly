@@ -225,55 +225,58 @@ def build_yield_unemployment_chart(colors: dict) -> go.Figure:
     return fig
 
 def build_copper_gold_pmi_chart(colors: dict) -> go.Figure:
-    # 1. Fetch Copper and Gold - Updated to 20 years
-    # Period options: '10y', '20y', 'max'
+    # 1. Fetch Copper and Gold (20 years)
     copper = yf.download("HG=F", period="20y")['Close']
     gold = yf.download("GC=F", period="20y")['Close']
     
     if isinstance(copper, pd.DataFrame): copper = copper.iloc[:, 0]
     if isinstance(gold, pd.DataFrame): gold = gold.iloc[:, 0]
 
-    # 2. Fetch the "PMI Proxy" (Industrial Production: Manufacturing - IPMAN)
-    # FRED series naturally go back decades, so this will align automatically
+    # 2. Fetch PMI Proxy (IPMAN)
     try:
         pmi_proxy = fred.get_series("IPMAN")
         pmi_proxy.name = "Manufacturing_Output"
     except Exception as e:
-        print(f"Error fetching IPMAN: {e}")
         pmi_proxy = fred.get_series("INDPRO") 
         pmi_proxy.name = "Industrial_Production"
     
-    # 3. Align Data
+    # 3. Align and Smooth Data
     df = pd.DataFrame(index=copper.index)
     df["Ratio"] = (copper / gold)
-    # PMI is monthly, so we ffill to match the 20-year daily history
-    df = df.join(pmi_proxy, how='left').ffill().dropna()
+    df = df.join(pmi_proxy, how='left').ffill()
+    
+    # --- SMOOTHING LOGIC ---
+    # We apply a 3-month rolling average to the proxy to remove monthly noise
+    df["Smoothed_Proxy"] = df["Manufacturing_Output"].rolling(window=90).mean() # ~3 months of daily rows
+    df = df.dropna()
     
     # 4. Create Figure
     fig = go.Figure()
     
+    # Ratio (Left Axis)
     fig.add_trace(go.Scatter(
         x=df.index, y=df["Ratio"], 
         name="Cu/Au Ratio",
-        line=dict(color=colors["mpw_blue"], width=1.5) # Thinner line for long timeframes
+        line=dict(color=colors["mpw_blue"], width=1.5)
     ))
     
-    # PMI Proxy (Right Axis)
+    # Smoothed Manufacturing Output (Right Axis)
     fig.add_trace(go.Scatter(
-        x=df.index, y=df[pmi_proxy.name], 
-        name="Mfg Output (PMI Proxy)",
-        line=dict(color=colors["mpw_orange"], width=1.5, dash='dot'),
+        x=df.index, y=df["Smoothed_Proxy"], 
+        name="Mfg Output (3m Smooth)",
+        # 'spline' makes the line curve naturally
+        line=dict(color=colors["mpw_orange"], width=2, shape='spline'),
         yaxis="y2"
     ))
 
     fig.update_layout(
-        title="20-Year Economic Engine: Cu/Au Ratio vs. Manufacturing Output",
+        title="20-Year Macro Engine: Cu/Au vs. Smoothed Manufacturing",
         yaxis=dict(title="Cu/Au Ratio"),
-        yaxis2=dict(title="Production Index", overlaying="y", side="right"),
+        yaxis2=dict(title="Production Index (Smoothed)", overlaying="y", side="right"),
         hovermode="x unified",
         template="plotly_dark"
     )
-    return fig
+    return fig fig
 
 def build_copper_gold_ratio_chart(colors: dict) -> go.Figure:
     # 1. Fetch Data
