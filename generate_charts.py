@@ -197,30 +197,36 @@ def build_net_liquidity_chart(btc_price: pd.Series, colors: dict) -> go.Figure:
     return fig
 
 def build_yield_unemployment_chart(colors: dict) -> go.Figure:
-    # 1. Fetch Data from FRED
-    # DGS10 = 10-Year Treasury Constant Maturity Rate
-    # UNRATE = Unemployment Rate
-    yield_10y = fred.get_series("DGS10")
-    unemployment = fred.get_series("UNRATE")
-    
-    # 2. Align Data
-    # Unemployment is monthly, Yield is daily. We'll ffill to make them match.
+    # 1. Fetch Data
     df = pd.DataFrame({
-        "Yield_10Y": yield_10y,
-        "Unemployment": unemployment
+        "Yield": fred.get_series("DGS10"),
+        "Unemployment": fred.get_series("UNRATE"),
+        "Recession": fred.get_series("USREC")
     }).ffill().dropna()
-    
-    # 3. Create the Figure
+
     fig = go.Figure()
-    
-    # 10-Year Yield (Left Axis)
+
+    # 2. Add Recession Shading (The "Logic Gate" Method)
+    # We find where Recession changes from 0 to 1 (Start) and 1 to 0 (End)
+    is_recession = df['Recession'] == 1
+    starts = df.index[is_recession & ~is_recession.shift(1).fillna(False)]
+    ends = df.index[is_recession & ~is_recession.shift(-1).fillna(False)]
+
+    for s, e in zip(starts, ends):
+        fig.add_vrect(
+            x0=s, x1=e,
+            fillcolor="rgba(200, 200, 200, 0.4)", # Visible but professional gray
+            layer="below", line_width=0
+        )
+
+    # 3. Add 10Y Yield (Left Axis)
     fig.add_trace(go.Scatter(
-        x=df.index, y=df["Yield_10Y"], 
-        name="10-Year Treasury Yield (%)",
+        x=df.index, y=df["Yield"], 
+        name="10Y Treasury Yield (%)",
         line=dict(color=colors["mpw_orange"], width=2)
     ))
     
-    # Unemployment Rate (Right Axis)
+    # 4. Add Unemployment Rate (Right Axis)
     fig.add_trace(go.Scatter(
         x=df.index, y=df["Unemployment"], 
         name="Unemployment Rate (%)",
@@ -229,12 +235,11 @@ def build_yield_unemployment_chart(colors: dict) -> go.Figure:
     ))
 
     fig.update_layout(
-        title="The Economic Cycle: 10Y Yield vs. Unemployment Rate",
+        title="Economic Cycle: 10Y Yield vs. Unemployment",
         yaxis=dict(title="Yield (%)"),
         yaxis2=dict(title="Unemployment (%)", overlaying="y", side="right"),
         hovermode="x unified"
     )
-    
     return fig
 # ────────────────────────────────────────────────
 # 4. Deployment
