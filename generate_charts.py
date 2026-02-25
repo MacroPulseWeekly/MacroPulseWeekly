@@ -224,44 +224,54 @@ def build_yield_unemployment_chart(colors: dict) -> go.Figure:
     fig.update_layout(title="Economic Cycle", yaxis2=dict(overlaying="y", side="right"), hovermode="x unified")
     return fig
 
-def build_copper_gold_ratio_chart(colors: dict) -> go.Figure:
-    # 1. Fetch Data
-    # We use auto_adjust=True and explicitly grab the 'Close' column
+def build_copper_gold_pmi_chart(colors: dict) -> go.Figure:
+    # 1. Fetch Copper and Gold
     copper = yf.download("HG=F", period="5y")['Close']
     gold = yf.download("GC=F", period="5y")['Close']
     
-    # 2. Flatten the data (yfinance sometimes returns MultiIndex columns)
-    if isinstance(copper, pd.DataFrame):
-        copper = copper.iloc[:, 0]
-    if isinstance(gold, pd.DataFrame):
-        gold = gold.iloc[:, 0]
+    if isinstance(copper, pd.DataFrame): copper = copper.iloc[:, 0]
+    if isinstance(gold, pd.DataFrame): gold = gold.iloc[:, 0]
 
-    # 3. Create the DataFrame explicitly with the indices
+    # 2. Fetch the "PMI Proxy" (Industrial Production: Manufacturing - IPMAN)
+    # IPMAN is a core FRED series and is widely available.
+    try:
+        pmi_proxy = fred.get_series("IPMAN")
+        pmi_proxy.name = "Manufacturing_Output"
+    except Exception as e:
+        print(f"Error fetching IPMAN: {e}")
+        # Fallback to a very common series if IPMAN fails
+        pmi_proxy = fred.get_series("INDPRO") 
+        pmi_proxy.name = "Industrial_Production"
+    
+    # 3. Align Data
     df = pd.DataFrame(index=copper.index)
-    df["Copper"] = copper
-    df["Gold"] = gold
-    df = df.dropna()
+    df["Ratio"] = (copper / gold)
+    df = df.join(pmi_proxy, how='left').ffill().dropna()
     
-    # 4. Calculate Ratio
-    df["Ratio"] = df["Copper"] / df["Gold"]
-    
-    # 5. Create the Figure
+    # 4. Create Figure
     fig = go.Figure()
     
     fig.add_trace(go.Scatter(
-        x=df.index, 
-        y=df["Ratio"], 
-        name="Copper/Gold Ratio",
+        x=df.index, y=df["Ratio"], 
+        name="Cu/Au Ratio",
         line=dict(color=colors["mpw_blue"], width=2)
+    ))
+    
+    # PMI Proxy (Right Axis)
+    fig.add_trace(go.Scatter(
+        x=df.index, y=df[pmi_proxy.name], 
+        name="Mfg Output (PMI Proxy)",
+        line=dict(color=colors["mpw_orange"], width=2, dash='dot'),
+        yaxis="y2"
     ))
 
     fig.update_layout(
-        title="Economic Barometer: Copper/Gold Ratio",
-        yaxis=dict(title="Ratio Value"),
-        template="plotly_dark", # Ensures it matches your theme
-        hovermode="x unified"
+        title="Economic Engine: Cu/Au Ratio vs. Manufacturing Output",
+        yaxis=dict(title="Cu/Au Ratio"),
+        yaxis2=dict(title="Production Index", overlaying="y", side="right"),
+        hovermode="x unified",
+        template="plotly_dark"
     )
-    
     return fig
 
 def build_copper_gold_pmi_chart(colors: dict) -> go.Figure:
