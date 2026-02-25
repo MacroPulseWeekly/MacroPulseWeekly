@@ -223,6 +223,40 @@ def build_yield_unemployment_chart(colors: dict) -> go.Figure:
 
     fig.update_layout(title="Economic Cycle", yaxis2=dict(overlaying="y", side="right"), hovermode="x unified")
     return fig
+
+def build_copper_gold_ratio_chart(colors: dict) -> go.Figure:
+    # 1. Fetch Data
+    # HG=F is Copper Futures, GC=F is Gold Futures
+    copper = yf.download("HG=F", period="5y")["Close"]
+    gold = yf.download("GC=F", period="5y")["Close"]
+    
+    # 2. Calculate Ratio
+    # We use a dataframe to ensure the dates match up perfectly
+    df = pd.DataFrame({
+        "Copper": copper,
+        "Gold": gold
+    }).dropna()
+    
+    df["Ratio"] = df["Copper"] / df["Gold"]
+    
+    # 3. Create the Figure
+    fig = go.Figure()
+    
+    fig.add_trace(go.Scatter(
+        x=df.index, 
+        y=df["Ratio"], 
+        name="Copper/Gold Ratio",
+        line=dict(color=colors["mpw_blue"], width=2)
+    ))
+
+    fig.update_layout(
+        title="Economic Barometer: Copper/Gold Ratio",
+        yaxis=dict(title="Ratio Value"),
+        xaxis=dict(title="Date"),
+        hovermode="x unified"
+    )
+    
+    return fig
 # ────────────────────────────────────────────────
 # 4. Deployment
 # ────────────────────────────────────────────────
@@ -255,6 +289,7 @@ def main():
     btc_m2_fig = build_btc_m2_chart(btc["Price"], colors)
     net_liq_fig = build_net_liquidity_chart(btc["Price"], colors)
     yield_unemp_fig = build_yield_unemployment_chart(colors)
+    copper_gold_fig = build_copper_gold_ratio_chart(colors)
 
     # 1. Save Standalone HTMLs (For Framer Embedding)
     # These include the library so they work as individual links
@@ -263,14 +298,13 @@ def main():
     btc_m2_fig.write_html("charts/btc_m2.html", include_plotlyjs="cdn", config={'responsive': True})
     net_liq_fig.write_html("charts/net_liquidity.html", include_plotlyjs="cdn", config={'responsive': True})
     yield_unemp_fig.write_html("charts/yield_unemployment.html", include_plotlyjs="cdn", config={'responsive': True})
+    copper_gold_fig.write_html("charts/copper_gold.html", include_plotlyjs="cdn", config={'responsive': True})
     
 
     # 2. Build the Main Dashboard Index (For GitHub Pages)
     build_dashboard_index({
-        "fg-rsi": fg_rsi_fig,
-        "btc-ai": btc_ai_fig,
-        "btc-m2": btc_m2_fig,   
-        "yield-unemp": yield_unemp_fig
+        # ... your other charts ...,
+        "copper-gold": copper_gold_fig
 })
     print("Update Complete: Charts and Index generated.")
 
