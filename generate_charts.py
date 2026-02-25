@@ -276,7 +276,7 @@ def build_copper_gold_pmi_chart(colors: dict) -> go.Figure:
         hovermode="x unified",
         template="plotly_dark"
     )
-    return fig fig
+    return fig
 
 def build_copper_gold_ratio_chart(colors: dict) -> go.Figure:
     # 1. Fetch Data
