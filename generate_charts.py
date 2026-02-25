@@ -1,4 +1,5 @@
 import os
+import requests
 from fredapi import Fred
 import pandas as pd
 import yfinance as yf
