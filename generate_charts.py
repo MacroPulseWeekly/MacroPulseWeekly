@@ -263,6 +263,56 @@ def build_copper_gold_ratio_chart(colors: dict) -> go.Figure:
     )
     
     return fig
+
+def build_copper_gold_pmi_chart(colors: dict) -> go.Figure:
+    # 1. Fetch Copper and Gold
+    copper = yf.download("HG=F", period="5y")['Close']
+    gold = yf.download("GC=F", period="5y")['Close']
+    
+    # Handle yfinance formatting
+    if isinstance(copper, pd.DataFrame): copper = copper.iloc[:, 0]
+    if isinstance(gold, pd.DataFrame): gold = gold.iloc[:, 0]
+
+    # 2. Fetch ISM PMI from FRED (Series: NAPM)
+    pmi = fred.get_series("NAPM")
+    pmi.name = "ISM_PMI"
+    
+    # 3. Align Data
+    df = pd.DataFrame(index=copper.index)
+    df["Ratio"] = (copper / gold)
+    df = df.join(pmi, how='left').ffill().dropna()
+    
+    # 4. Create Figure
+    fig = go.Figure()
+    
+    # Ratio (Left Axis)
+    fig.add_trace(go.Scatter(
+        x=df.index, y=df["Ratio"], 
+        name="Cu/Au Ratio",
+        line=dict(color=colors["mpw_blue"], width=2)
+    ))
+    
+    # ISM PMI (Right Axis)
+    fig.add_trace(go.Scatter(
+        x=df.index, y=df["ISM_PMI"], 
+        name="ISM Manufacturing PMI",
+        line=dict(color=colors["mpw_orange"], width=2),
+        yaxis="y2"
+    ))
+
+    # Add the "Expansion/Contraction" 50 Line
+    fig.add_hline(y=50, line=dict(color="rgba(255,255,255,0.5)", dash="dash", width=1), 
+                  annotation_text="Expansion / Contraction", 
+                  annotation_position="bottom right", yaxis="y2")
+
+    fig.update_layout(
+        title="Economic Engine: Cu/Au Ratio vs. ISM Manufacturing PMI",
+        yaxis=dict(title="Cu/Au Ratio"),
+        yaxis2=dict(title="ISM PMI Index", overlaying="y", side="right", range=[30, 70]),
+        hovermode="x unified",
+        template="plotly_dark"
+    )
+    return fig
 # ────────────────────────────────────────────────
 # 4. Deployment
 # ────────────────────────────────────────────────
@@ -296,6 +346,7 @@ def main():
     net_liq_fig = build_net_liquidity_chart(btc["Price"], colors)
     yield_unemp_fig = build_yield_unemployment_chart(colors)
     copper_gold_fig = build_copper_gold_ratio_chart(colors)
+    cu_au_pmi_fig = build_copper_gold_pmi_chart(colors)
 
     # 1. Save Standalone HTMLs (For Framer Embedding)
     # These include the library so they work as individual links
@@ -305,12 +356,14 @@ def main():
     net_liq_fig.write_html("charts/net_liquidity.html", include_plotlyjs="cdn", config={'responsive': True})
     yield_unemp_fig.write_html("charts/yield_unemployment.html", include_plotlyjs="cdn", config={'responsive': True})
     copper_gold_fig.write_html("charts/copper_gold.html", include_plotlyjs="cdn", config={'responsive': True})
+    cu_au_pmi_fig.write_html("charts/cu_au_pmi.html", include_plotlyjs="cdn")
     
 
     # 2. Build the Main Dashboard Index (For GitHub Pages)
     build_dashboard_index({
         # ... your other charts ...,
         "copper-gold": copper_gold_fig
+        "cu-au-pmi": cu_au_pmi_fig
 })
     print("Update Complete: Charts and Index generated.")
 
