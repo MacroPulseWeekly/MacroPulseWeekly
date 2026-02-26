@@ -313,24 +313,53 @@ def build_copper_gold_ratio_chart(colors: dict) -> go.Figure:
     )
     return fig
 
+def build_ibit_proxy_fallback(colors: dict) -> go.Figure:
+    """Fallback function that uses stable Yahoo Finance data if scraping fails."""
+    try:
+        # Fetch IBIT (BlackRock) and BTC
+        ibit = yf.download("IBIT", period="1y", progress=False)
+        btc = yf.download("BTC-USD", period="1y", progress=False)
+
+        # Handle potential MultiIndex columns
+        if isinstance(ibit.columns, pd.MultiIndex): ibit.columns = ibit.columns.get_level_values(0)
+        if isinstance(btc.columns, pd.MultiIndex): btc.columns = btc.columns.get_level_values(0)
+
+        df = pd.DataFrame(index=ibit.index)
+        df['Volume'] = ibit['Volume']
+        df['BTC'] = btc['Close']
+        df = df.dropna()
+
+        fig = go.Figure()
+        # Bars for Volume (Proxy for Institutional activity)
+        fig.add_trace(go.Bar(x=df.index, y=df['Volume'], name="IBIT Volume", marker_color=colors["mpw_blue"], opacity=0.6))
+        # Line for BTC Price
+        fig.add_trace(go.Scatter(x=df.index, y=df['BTC'], name="BTC Price", line=dict(color=colors["mpw_orange"]), yaxis="y2"))
+
+        fig.update_layout(
+            title="Institutional Demand Proxy (IBIT Volume)",
+            yaxis=dict(title="Shares Traded"),
+            yaxis2=dict(title="BTC Price", overlaying="y", side="right"),
+            template="plotly_dark"
+        )
+        return fig
+    except Exception as e:
+        return go.Figure().update_layout(title=f"Critical Data Error: {str(e)[:30]}")
+
 def build_btc_etf_flow_chart(colors: dict) -> go.Figure:
-    # Farside is the gold standard for institutional flow data
+    """Primary scraper with automatic fallback to stable data."""
     url = "https://farside.co.uk/bitcoin-etf-flow-all-data/"
     header = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
 
     try:
         r = requests.get(url, headers=header, timeout=15)
-        # We look for the main data table
         tables = pd.read_html(r.text)
         
-        # Farside's main table is usually the first one with 'Total' or 'IBIT'
+        # Look for the main flow table
         df = next(t for t in tables if 'IBIT' in t.columns)
-        
-        # 1. Clean Columns & Dates
         df = df[['Date', 'Total']].copy()
         df['Date'] = pd.to_datetime(df['Date'], errors='coerce')
         
-        # 2. Clean 'Total' strings (Farside uses parentheses for negatives: ($10.5))
+        # Clean numeric strings
         df['Total'] = (df['Total'].astype(str)
                        .str.replace('$', '', regex=False)
                        .str.replace(',', '', regex=False)
@@ -340,33 +369,18 @@ def build_btc_etf_flow_chart(colors: dict) -> go.Figure:
         df['Total'] = pd.to_numeric(df['Total'], errors='coerce')
         df = df.dropna().sort_values('Date')
 
-        # 3. Create Chart
         fig = go.Figure()
-        # Bars for daily flows
-        fig.add_trace(go.Bar(
-            x=df['Date'], y=df['Total'],
-            name="Daily Net Flow ($M)",
-            marker_color=df['Total'].apply(lambda x: colors["mpw_blue"] if x > 0 else colors["mpw_red"])
-        ))
-        # Line for cumulative
-        fig.add_trace(go.Scatter(
-            x=df['Date'], y=df['Total'].cumsum(),
-            name="Cumulative Flow",
-            line=dict(color=colors["mpw_orange"], width=2),
-            yaxis="y2"
-        ))
+        fig.add_trace(go.Bar(x=df['Date'], y=df['Total'], name="Daily Flow ($M)",
+                             marker_color=df['Total'].apply(lambda x: colors["mpw_blue"] if x > 0 else colors["mpw_red"])))
+        fig.add_trace(go.Scatter(x=df['Date'], y=df['Total'].cumsum(), name="Cumulative", 
+                                 line=dict(color=colors["mpw_orange"]), yaxis="y2"))
 
-        fig.update_layout(
-            title="Institutional Appetite: Bitcoin Spot ETF Net Flows (Farside)",
-            yaxis=dict(title="Daily Flow ($ Millions)"),
-            yaxis2=dict(title="Cumulative", overlaying="y", side="right"),
-            template="plotly_dark", hovermode="x unified"
-        )
+        fig.update_layout(title="Bitcoin Spot ETF Net Flows (Farside)", template="plotly_dark", yaxis2=dict(overlaying="y", side="right"))
         return fig
 
     except Exception as e:
-        print(f"Farside Scraper Error: {e}")
-        # FALLBACK: If Farside fails, return the IBIT Volume Proxy logic instead
+        print(f"Scraper failed, using fallback: {e}")
+        # THIS CALLS THE FUNCTION WE ADDED ABOVE
         return build_ibit_proxy_fallback(colors)
 # ────────────────────────────────────────────────
 # 4. Deployment
