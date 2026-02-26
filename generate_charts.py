@@ -314,81 +314,60 @@ def build_copper_gold_ratio_chart(colors: dict) -> go.Figure:
     return fig
 
 def build_btc_etf_flow_chart(colors: dict) -> go.Figure:
-    # 1. Configuration
-    url = "https://bitbo.io/treasuries/etf-flows/"
-    # Using a modern User-Agent to prevent bot blocking
-    header = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8"
-    }
+    # Farside is the gold standard for institutional flow data
+    url = "https://farside.co.uk/bitcoin-etf-flow-all-data/"
+    header = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
 
     try:
-        # 2. Scrape the data with a timeout
         r = requests.get(url, headers=header, timeout=15)
-        if r.status_code != 200:
-            print(f"Bitbo access failed: Status {r.status_code}")
-            return go.Figure().update_layout(title="ETF Flow Source Connection Error")
-
-        # 3. Locate the correct table
+        # We look for the main data table
         tables = pd.read_html(r.text)
-        df = None
-        for t in tables:
-            # We look for the table containing both Date and Totals
-            if 'Date' in t.columns and 'Totals' in t.columns:
-                df = t.copy()
-                break
         
-        if df is None:
-            print("Could not find the specific ETF flow table on page.")
-            return go.Figure().update_layout(title="ETF Table Structure Changed")
-
-        # 4. Clean and Format Data
-        # Ensure Date is datetime and Totals is numeric
+        # Farside's main table is usually the first one with 'Total' or 'IBIT'
+        df = next(t for t in tables if 'IBIT' in t.columns)
+        
+        # 1. Clean Columns & Dates
+        df = df[['Date', 'Total']].copy()
         df['Date'] = pd.to_datetime(df['Date'], errors='coerce')
         
-        # Clean numeric strings (remove $, commas, and handle 'm' if Bitbo uses it)
-        df['Totals'] = df['Totals'].astype(str).str.replace('$', '', regex=False)
-        df['Totals'] = df['Totals'].str.replace(',', '', regex=False)
-        df['Totals'] = pd.to_numeric(df['Totals'], errors='coerce')
+        # 2. Clean 'Total' strings (Farside uses parentheses for negatives: ($10.5))
+        df['Total'] = (df['Total'].astype(str)
+                       .str.replace('$', '', regex=False)
+                       .str.replace(',', '', regex=False)
+                       .str.replace('(', '-', regex=False)
+                       .str.replace(')', '', regex=False))
         
-        # Drop rows where critical data is missing and sort by time
-        df = df.dropna(subset=['Date', 'Totals']).sort_values('Date')
+        df['Total'] = pd.to_numeric(df['Total'], errors='coerce')
+        df = df.dropna().sort_values('Date')
 
-        # 5. Create the Visualization
+        # 3. Create Chart
         fig = go.Figure()
-        
-        # Daily Net Flow Bars
+        # Bars for daily flows
         fig.add_trace(go.Bar(
-            x=df['Date'], 
-            y=df['Totals'],
-            name="Daily Net Flow",
-            # Blue for inflows, Red for outflows
-            marker_color=df['Totals'].apply(lambda x: colors["mpw_blue"] if x > 0 else colors["mpw_red"])
+            x=df['Date'], y=df['Total'],
+            name="Daily Net Flow ($M)",
+            marker_color=df['Total'].apply(lambda x: colors["mpw_blue"] if x > 0 else colors["mpw_red"])
         ))
-
-        # Cumulative Flow Line (Right Axis)
+        # Line for cumulative
         fig.add_trace(go.Scatter(
-            x=df['Date'], 
-            y=df['Totals'].cumsum(),
+            x=df['Date'], y=df['Total'].cumsum(),
             name="Cumulative Flow",
-            line=dict(color=colors["mpw_orange"], width=2.5),
+            line=dict(color=colors["mpw_orange"], width=2),
             yaxis="y2"
         ))
 
-        # Layout styling
         fig.update_layout(
-            title="Institutional Pulse: Bitcoin Spot ETF Net Flows",
-            yaxis=dict(title="Daily Net Flow ($ Millions)"),
-            yaxis2=dict(title="Total Cumulative Flow", overlaying="y", side="right"),
-            template="plotly_dark",
-            hovermode="x unified",
-            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+            title="Institutional Appetite: Bitcoin Spot ETF Net Flows (Farside)",
+            yaxis=dict(title="Daily Flow ($ Millions)"),
+            yaxis2=dict(title="Cumulative", overlaying="y", side="right"),
+            template="plotly_dark", hovermode="x unified"
         )
         return fig
 
     except Exception as e:
-        print(f"ETF Flow Scraper Failed: {e}")
-        return go.Figure().update_layout(title=f"ETF Data Error: {str(e)[:30]}")
+        print(f"Farside Scraper Error: {e}")
+        # FALLBACK: If Farside fails, return the IBIT Volume Proxy logic instead
+        return build_ibit_proxy_fallback(colors)
 # ────────────────────────────────────────────────
 # 4. Deployment
 # ────────────────────────────────────────────────
