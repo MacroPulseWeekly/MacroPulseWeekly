@@ -387,7 +387,7 @@ def build_fg_rsi_21_chart(btc_price: pd.Series, colors: dict) -> go.Figure:
     # Compute 21-period RSI
     rsi_21 = compute_rsi(btc_price, window=21)
     
-    # Add a 9-period smoothing (Signal Line) for a cleaner macro look
+    # Add a 9-period smoothing (Signal Line)
     signal_line = rsi_21.rolling(window=9).mean()
     
     fig = go.Figure()
@@ -411,7 +411,7 @@ def build_fg_rsi_21_chart(btc_price: pd.Series, colors: dict) -> go.Figure:
     fig.add_hline(y=30, line=dict(color="#00ff88", dash="dash", width=1))
 
     fig.update_layout(
-        title="Macro Sentiment: Bitcoin 21-Period RSI",
+        title="BTC Fear & Greed RSI (21 Period)", # <--- Updated Title
         yaxis=dict(title="RSI Value", range=[0, 100]),
         template="plotly_dark",
         hovermode="x unified"
