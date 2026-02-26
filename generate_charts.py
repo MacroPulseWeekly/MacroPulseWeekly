@@ -418,6 +418,39 @@ def build_fg_rsi_21_chart(btc_price: pd.Series, colors: dict) -> go.Figure:
     )
     return fig
 
+def build_gli_bes_change_chart(colors: dict) -> go.Figure:
+    """Current relationship: 60/30/10 Crypto Basket vs. Global Liquidity"""
+    # 1. Fetch Data
+    liq = fred.get_series("WALCL")
+    assets = ["BTC-USD", "ETH-USD", "SOL-USD"]
+    data = yf.download(assets, period="2y", progress=False)['Close']
+    if isinstance(data.columns, pd.MultiIndex):
+        data.columns = data.columns.get_level_values(0)
+
+    # 2. 60/30/10 Weighted Basket
+    norm = data / data.iloc[0] * 100
+    basket = (norm["BTC-USD"] * 0.60) + (norm["ETH-USD"] * 0.30) + (norm["SOL-USD"] * 0.10)
+    
+    # 3. 6-Week % Change
+    liq_w = liq.resample('W').last()
+    basket_w = basket.resample('W').last()
+    liq_6w_ch = liq_w.pct_change(periods=6) * 100
+    basket_6w_ch = basket_w.pct_change(periods=6) * 100
+
+    fig = go.Figure()
+    # Global Liquidity - White Line
+    fig.add_trace(go.Scatter(x=liq_6w_ch.index, y=liq_6w_ch, name="GLI$ (6w %ch)", line=dict(color="white", width=1.5)))
+    # Crypto Basket - Orange Line
+    fig.add_trace(go.Scatter(x=basket_6w_ch.index, y=basket_6w_ch, name="Crypto Basket (60/30/10)", line=dict(color=colors["mpw_orange"], width=2), yaxis="y2"))
+
+    fig.update_layout(
+        title="Current Pulse: GLI$ vs. Crypto Basket (6w %ch)",
+        yaxis=dict(title="GLI$ % Change", range=[-3, 4]),
+        yaxis2=dict(title="Basket % Change", overlaying="y", side="right", range=[-60, 100]),
+        template="plotly_dark", hovermode="x unified"
+    )
+    return fig
+
 def build_leading_liquidity_chart(colors: dict) -> go.Figure:
     # 1. Fetch Data
     liq = fred.get_series("WALCL")
