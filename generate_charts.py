@@ -382,6 +382,41 @@ def build_btc_etf_flow_chart(colors: dict) -> go.Figure:
         print(f"Scraper failed, using fallback: {e}")
         # THIS CALLS THE FUNCTION WE ADDED ABOVE
         return build_ibit_proxy_fallback(colors)
+
+def build_fg_rsi_21_chart(btc_price: pd.Series, colors: dict) -> go.Figure:
+    # Compute 21-period RSI
+    rsi_21 = compute_rsi(btc_price, window=21)
+    
+    # Add a 9-period smoothing (Signal Line) for a cleaner macro look
+    signal_line = rsi_21.rolling(window=9).mean()
+    
+    fig = go.Figure()
+
+    # Main RSI Line
+    fig.add_trace(go.Scatter(
+        x=rsi_21.index, y=rsi_21, 
+        name="RSI (21)", 
+        line=dict(color=colors["mpw_blue"], width=2)
+    ))
+    
+    # Signal Line (Smoothed)
+    fig.add_trace(go.Scatter(
+        x=signal_line.index, y=signal_line, 
+        name="Signal (9)", 
+        line=dict(color=colors["mpw_orange"], width=1.5, dash='dot')
+    ))
+
+    # Overbought/Oversold Zones
+    fig.add_hline(y=70, line=dict(color="#ff4b4b", dash="dash", width=1))
+    fig.add_hline(y=30, line=dict(color="#00ff88", dash="dash", width=1))
+
+    fig.update_layout(
+        title="Macro Sentiment: Bitcoin 21-Period RSI",
+        yaxis=dict(title="RSI Value", range=[0, 100]),
+        template="plotly_dark",
+        hovermode="x unified"
+    )
+    return fig
 # ────────────────────────────────────────────────
 # 4. Deployment
 # ────────────────────────────────────────────────
@@ -410,6 +445,7 @@ def main():
 
     # Build All Figures
     fg_rsi_fig = build_fg_rsi_chart(btc["Price"], colors)
+    fg_rsi_21_fig = build_fg_rsi_21_chart(btc["Price"], colors)
     btc_ai_fig = build_btc_vs_ai_chart(btc, trends, colors)
     btc_m2_fig = build_btc_m2_chart(btc["Price"], colors)
     net_liq_fig = build_net_liquidity_chart(btc["Price"], colors)
@@ -420,6 +456,7 @@ def main():
 
     # 1. Save Standalone HTMLs (For Framer)
     fg_rsi_fig.write_html("charts/fg_rsi.html", include_plotlyjs="cdn", config={'responsive': True})
+    fg_rsi_21_fig.write_html("charts/fg_rsi_21.html", include_plotlyjs="cdn", config={'responsive': True})
     btc_ai_fig.write_html("charts/btc_ai.html", include_plotlyjs="cdn", config={'responsive': True})
     btc_m2_fig.write_html("charts/btc_m2.html", include_plotlyjs="cdn", config={'responsive': True})
     net_liq_fig.write_html("charts/net_liquidity.html", include_plotlyjs="cdn", config={'responsive': True})
@@ -431,6 +468,7 @@ def main():
     # 2. Build the Main Dashboard Index (MUST INCLUDE ALL KEYS)
     build_dashboard_index({
         "fg-rsi": fg_rsi_fig,
+        "fg-rsi-21": fg_rsi_21_fig,
         "btc-ai": btc_ai_fig,
         "btc-m2": btc_m2_fig,
         "net-liq": net_liq_fig,
@@ -439,7 +477,7 @@ def main():
         "cu-au-pmi": cu_au_pmi_fig,
         "btc-etf-flows": btc_etf_fig
     })
-    print("Update Complete: 8 Charts and Index generated.")
+    print("Update Complete: 9 Charts and Index generated.")
 
 if __name__ == "__main__":
     main()
