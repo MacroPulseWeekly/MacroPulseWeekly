@@ -417,6 +417,41 @@ def build_fg_rsi_21_chart(btc_price: pd.Series, colors: dict) -> go.Figure:
         hovermode="x unified"
     )
     return fig
+
+def build_leading_liquidity_chart(colors: dict) -> go.Figure:
+    # 1. Fetch Data
+    liq = fred.get_series("WALCL")
+    assets = ["BTC-USD", "ETH-USD", "SOL-USD"]
+    data = yf.download(assets, period="2y", progress=False)['Close']
+    if isinstance(data.columns, pd.MultiIndex):
+        data.columns = data.columns.get_level_values(0)
+
+    # 2. 60/30/10 Weighted Basket
+    norm = data / data.iloc[0] * 100
+    basket = (norm["BTC-USD"] * 0.60) + (norm["ETH-USD"] * 0.30) + (norm["SOL-USD"] * 0.10)
+    
+    # 3. 6-Week % Change
+    liq_w = liq.resample('W').last()
+    basket_w = basket.resample('W').last()
+    liq_6w_ch = liq_w.pct_change(periods=6) * 100
+    basket_6w_ch = basket_w.pct_change(periods=6) * 100
+
+    # 4. THE 3-MONTH LEAD (13 Weeks)
+    liq_leading = liq_6w_ch.shift(13)
+
+    fig = go.Figure()
+    # Leading Liquidity - White Line
+    fig.add_trace(go.Scatter(x=liq_leading.index, y=liq_leading, name="GLI$ (6w %ch, +13w Lead)", line=dict(color="white", width=1.5)))
+    # Crypto Basket - Orange Line
+    fig.add_trace(go.Scatter(x=basket_6w_ch.index, y=basket_6w_ch, name="Crypto Basket (60/30/10)", line=dict(color=colors["mpw_orange"], width=2), yaxis="y2"))
+
+    fig.update_layout(
+        title="Leading Indicator: GLI$ (+13w) vs. Crypto Basket",
+        yaxis=dict(title="GLI$ % Change", range=[-3, 4]),
+        yaxis2=dict(title="Basket % Change", overlaying="y", side="right", range=[-60, 100]),
+        template="plotly_dark", hovermode="x unified"
+    )
+    return fig
 # ────────────────────────────────────────────────
 # 4. Deployment
 # ────────────────────────────────────────────────
@@ -453,6 +488,10 @@ def main():
     copper_gold_fig = build_copper_gold_ratio_chart(colors)
     cu_au_pmi_fig = build_copper_gold_pmi_chart(colors)
     btc_etf_fig = build_btc_etf_flow_chart(colors)
+    
+    # New Crypto Basket & Liquidity Charts
+    gli_bes_fig = build_gli_bes_change_chart(colors)  # Current 60/30/10 vs GLI
+    leading_liq_fig = build_leading_liquidity_chart(colors)  # +13w Leading GLI
 
     # 1. Save Standalone HTMLs (For Framer)
     fg_rsi_fig.write_html("charts/fg_rsi.html", include_plotlyjs="cdn", config={'responsive': True})
@@ -463,7 +502,11 @@ def main():
     yield_unemp_fig.write_html("charts/yield_unemployment.html", include_plotlyjs="cdn", config={'responsive': True})
     copper_gold_fig.write_html("charts/copper_gold.html", include_plotlyjs="cdn", config={'responsive': True})
     cu_au_pmi_fig.write_html("charts/cu_au_pmi.html", include_plotlyjs="cdn")
-    btc_etf_fig.write_html("charts/btc_etf_flows.html", include_plotlyjs="cdn")
+    btc_etf_flows_fig.write_html("charts/btc_etf_flows.html", include_plotlyjs="cdn")
+    
+    # New saves for Framer
+    gli_bes_fig.write_html("charts/gli_bes_change.html", include_plotlyjs="cdn", config={'responsive': True})
+    leading_liq_fig.write_html("charts/leading_liquidity.html", include_plotlyjs="cdn", config={'responsive': True})
 
     # 2. Build the Main Dashboard Index (MUST INCLUDE ALL KEYS)
     build_dashboard_index({
@@ -475,9 +518,11 @@ def main():
         "yield-unemp": yield_unemp_fig,
         "copper-gold": copper_gold_fig,
         "cu-au-pmi": cu_au_pmi_fig,
-        "btc-etf-flows": btc_etf_fig
+        "btc-etf-flows": btc_etf_fig,
+        "gli-bes": gli_bes_fig,
+        "leading-liq": leading_liq_fig
     })
-    print("Update Complete: 9 Charts and Index generated.")
+    print("Update Complete: 11 Charts and Index generated.")
 
 if __name__ == "__main__":
     main()
