@@ -362,7 +362,7 @@ def build_btc_etf_flow_chart(colors: dict) -> go.Figure:
             x=df['Date'], 
             y=df['Totals'],
             name="Daily Net Flow",
-            # Green for inflows, Red for outflows
+            # Blue for inflows, Red for outflows
             marker_color=df['Totals'].apply(lambda x: colors["mpw_blue"] if x > 0 else colors["mpw_red"])
         ))
 
@@ -388,7 +388,7 @@ def build_btc_etf_flow_chart(colors: dict) -> go.Figure:
 
     except Exception as e:
         print(f"ETF Flow Scraper Failed: {e}")
-        return go.Figure().update_layout(title="ETF Flow Data Temporarily Unavailable")
+        return go.Figure().update_layout(title=f"ETF Data Error: {str(e)[:30]}")
 # ────────────────────────────────────────────────
 # 4. Deployment
 # ────────────────────────────────────────────────
