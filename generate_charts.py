@@ -301,21 +301,50 @@ def build_crash_sentiment_overlay(colors: dict) -> go.Figure:
 # ────────────────────────────────────────────────
 
 def build_dashboard_index(figs_dict: dict):
-    with open("template.html", "r", encoding="utf-8") as f:
-        content = f.read()
-    for div_id, fig in figs_dict.items():
-        snippet = fig.to_html(include_plotlyjs=False, full_html=False, config={'responsive': True})
-        content = content.replace(f'<div id="{div_id}"></div>', f'<div id="{div_id}">{snippet}</div>')
-    with open("index.html", "w", encoding="utf-8") as f:
-        f.write(content)
+    """
+    Reads template.html, replaces {{ chart_name_chart }} placeholders 
+    with Plotly HTML snippets, and saves the final result to index.html.
+    """
+    print("Building final dashboard index...")
+    
+    try:
+        with open("template.html", "r", encoding="utf-8") as f:
+            content = f.read()
+
+        for div_id, fig in figs_dict.items():
+            # Generate the HTML snippet for the chart
+            snippet = fig.to_html(include_plotlyjs=False, full_html=False, config={'responsive': True})
+            
+            # This turns "crash-sentiment" into "{{ crash_sentiment_chart }}"
+            # to match the placeholders in your template.html
+            placeholder = "{{" + div_id.replace("-", "_") + "_chart" + "}}"
+            
+            if placeholder in content:
+                content = content.replace(placeholder, snippet)
+            else:
+                print(f"Warning: Placeholder {placeholder} not found in template.")
+
+        # Optional: Add a 'Last Updated' timestamp
+        last_updated = datetime.now().strftime("%Y-%m-%d %H:%M:%S UTC")
+        if "{{ last_updated }}" in content:
+            content = content.replace("{{ last_updated }}", last_updated)
+
+        with open("index.html", "w", encoding="utf-8") as f:
+            f.write(content)
+            
+        print("Success: index.html has been generated.")
+
+    except FileNotFoundError:
+        print("Error: template.html not found. Make sure it's in the same directory.")
 
 def main():
     ensure_charts_dir()
     colors = register_macro_theme()
     btc = get_data()
 
-    # Dictionary updated with commas to prevent SyntaxError
+    # Dictionary updated with commas and matching HTML IDs
     figs = {
+        "crash-sentiment": build_crash_sentiment_overlay(colors), # Key matches HTML ID
         "fg-rsi": build_fg_rsi_chart(btc["Price"], colors),
         "fg-rsi-21": build_fg_rsi_21_chart(btc["Price"], colors),
         "gli-bes": build_gli_bes_change_chart(colors),
@@ -328,15 +357,13 @@ def main():
         "delinquency-unemp": build_delinquency_unemployment_chart(colors),
         "copper-gold": build_copper_gold_ratio_chart(colors),
         "cu-au-pmi": build_cu_au_pmi_chart(colors),
-        "btc-etf-flows": build_btc_etf_flow_chart(colors)
-        "panic-barometer": build_crash_sentiment_overlay(colors)
+        "btc-etf-flows": build_btc_etf_flow_chart(colors) # Added comma here
     }
 
+    # Save individual files for backup/social sharing
     for name, fig in figs.items():
         fig.write_html(f"charts/{name.replace('-', '_')}.html", include_plotlyjs="cdn")
 
+    # This function pushes the charts into your template.html
     build_dashboard_index(figs)
     print(f"Update Complete: {len(figs)} Charts generated.")
-
-if __name__ == "__main__":
-    main()
