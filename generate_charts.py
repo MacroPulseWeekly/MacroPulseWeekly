@@ -201,12 +201,34 @@ def build_gli_bes_change_chart(colors: dict) -> go.Figure:
     return fig
 
 def build_leading_liquidity_chart(colors: dict) -> go.Figure:
-    liq = fred.get_series("WALCL").resample('W').last().pct_change(periods=6)*100
-    btc = yf.download("BTC-USD", period="2y", progress=False)['Close'].resample('W').last().pct_change(periods=6)*100
+    print("Fetching Leading Liquidity data...")
+    # Fetch 5 years to ensure plenty of overlap
+    liq = fred.get_series("WALCL", observation_start="2020-01-01")
+    btc = yf.download("BTC-USD", start="2020-01-01", progress=False)['Close']
+    
+    if isinstance(btc, pd.DataFrame): btc = btc.iloc[:, 0]
+
+    # Calculate 6-week % change
+    liq_6w = liq.resample('W').last().pct_change(periods=6) * 100
+    btc_6w = btc.resample('W').last().pct_change(periods=6) * 100
+
+    # THE FIX: Shift the liquidity forward, but don't drop the latest BTC data
+    # We want to see where liquidity WAS 13 weeks ago vs where BTC is NOW
+    df = pd.DataFrame({
+        "GLI_Leading": liq_6w.shift(13),
+        "BTC_Ch": btc_6w
+    }).dropna()
+
     fig = go.Figure()
-    fig.add_trace(go.Scatter(x=liq.index.shift(13), y=liq, name="GLI$ (Leading)", line=dict(color="white")))
-    fig.add_trace(go.Scatter(x=btc.index, y=btc, name="BTC %ch", line=dict(color=colors["mpw_orange"]), yaxis="y2"))
-    fig.update_layout(title="Leading GLI$ (+13w) vs. BTC")
+    fig.add_trace(go.Scatter(x=df.index, y=df["GLI_Leading"], name="GLI$ (Leading +13w)", line=dict(color="white", width=1.5)))
+    fig.add_trace(go.Scatter(x=df.index, y=df["BTC_Ch"], name="BTC %ch", line=dict(color=colors["mpw_orange"], width=2), yaxis="y2"))
+
+    fig.update_layout(
+        title="Leading Indicator: GLI$ (+13w) vs. BTC",
+        yaxis=dict(title="GLI$ % Change"),
+        yaxis2=dict(title="BTC % Change", overlaying="y", side="right"),
+        hovermode="x unified"
+    )
     return fig
 
 # ────────────────────────────────────────────────
