@@ -69,7 +69,7 @@ def get_data():
 # ────────────────────────────────────────────────
 
 def build_narrative_heat_chart(colors: dict) -> go.Figure:
-    print("Fetching Narrative Heat data from SerpApi...")
+    print("Fetching Narrative Heat data...")
     params = {
         "engine": "google_trends",
         "q": "AI, AGI, Productivity",
@@ -85,7 +85,7 @@ def build_narrative_heat_chart(colors: dict) -> go.Figure:
         fig.add_trace(go.Scatter(x=[d['date'] for d in timeline], y=[d['values'][0]['extracted_value'] for d in timeline], name="AI Interest", line=dict(color=colors["mpw_orange"], width=3)))
         fig.add_trace(go.Scatter(x=[d['date'] for d in timeline], y=[d['values'][1]['extracted_value'] for d in timeline], name="AGI Interest", line=dict(color=colors["mpw_cyan"], width=2)))
         fig.add_trace(go.Scatter(x=[d['date'] for d in timeline], y=[d['values'][2]['extracted_value'] for d in timeline], name="Productivity", line=dict(color=colors["mpw_gray"], width=2, dash='dot')))
-        fig.update_layout(title="Narrative Heat: AI/AGI Hype vs. Productivity Reality")
+        fig.update_layout(title="Narrative Heat: AI/AGI vs. Productivity")
         return fig
     except Exception as e:
         print(f"Narrative Heat Error: {e}")
@@ -112,7 +112,7 @@ def build_fg_rsi_21_chart(btc_price: pd.Series, colors: dict) -> go.Figure:
 def build_btc_ai_fallback(btc: pd.DataFrame, colors: dict) -> go.Figure:
     fig = go.Figure()
     fig.add_trace(go.Scatter(x=btc.index, y=btc["Price"], name="BTC Price", line=dict(color=colors["mpw_orange"])))
-    fig.update_layout(title="BTC Price (Narrative Analysis)")
+    fig.update_layout(title="BTC Price (Trend Overlay)")
     return fig
 
 def build_btc_m2_chart(btc_price: pd.Series, colors: dict) -> go.Figure:
@@ -131,8 +131,8 @@ def build_net_liquidity_chart(btc_price: pd.Series, colors: dict) -> go.Figure:
     net_liq = (df_liq["WALCL"] - df_liq["TGA"] - df_liq["RRP"]) / 1000
     merged = pd.concat([btc_price.shift(70), net_liq.rename("Net_Liq")], axis=1).ffill().dropna()
     fig = go.Figure()
-    fig.add_trace(go.Scatter(x=merged.index, y=merged["Price"], name="BTC Price (70D Lag)", line=dict(color=colors["mpw_orange"])))
-    fig.add_trace(go.Scatter(x=merged.index, y=merged["Net_Liq"], name="Net Liquidity", yaxis="y2", line=dict(color=colors["mpw_blue"], dash='dot')))
+    fig.add_trace(go.Scatter(x=merged.index, y=merged["Price"], name="BTC (70D Lag)", line=dict(color=colors["mpw_orange"])))
+    fig.add_trace(go.Scatter(x=merged.index, y=merged["Net_Liq"], name="Net Liq", yaxis="y2", line=dict(color=colors["mpw_blue"], dash='dot')))
     fig.update_layout(title="Monetary Fuel: BTC vs Net Liquidity", yaxis2=dict(overlaying="y", side="right"))
     return fig
 
@@ -144,8 +144,22 @@ def build_yield_unemployment_chart(colors: dict) -> go.Figure:
     for s, e in zip(starts, ends): fig.add_vrect(x0=s, x1=e, fillcolor="rgba(150,150,150,0.2)", layer="below", line_width=0)
     fig.add_trace(go.Scatter(x=df.index, y=df["Yield"], name="10Y Yield", line=dict(color=colors["mpw_orange"])))
     fig.add_trace(go.Scatter(x=df.index, y=df["Unemployment"], name="Unemployment", yaxis="y2", line=dict(color=colors["mpw_blue"])))
-    fig.update_layout(title="Economic Cycle", yaxis2=dict(overlaying="y", side="right"))
+    fig.update_layout(title="Economic Cycle (Yield vs Unemp)", yaxis2=dict(overlaying="y", side="right"))
     return fig
+
+def build_delinquency_unemployment_chart(colors: dict) -> go.Figure:
+    print("Fetching Delinquency data...")
+    try:
+        df = pd.DataFrame({
+            "Delinquency": fred.get_series("DRBLACBS"),
+            "Unemployment": fred.get_series("UNRATE")
+        }).ffill().dropna()
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(x=df.index, y=df["Delinquency"], name="Biz Delinquency %", line=dict(color=colors["mpw_orange"], width=3)))
+        fig.add_trace(go.Scatter(x=df.index, y=df["Unemployment"], name="Unemployment %", yaxis="y2", line=dict(color=colors["mpw_blue"], width=2, dash='dot')))
+        fig.update_layout(title="Credit Risk vs Labor Market", yaxis2=dict(overlaying="y", side="right"))
+        return fig
+    except: return go.Figure().update_layout(title="Delinquency Data Unavailable")
 
 def build_copper_gold_ratio_chart(colors: dict) -> go.Figure:
     c, g = yf.download("HG=F", period="5y", progress=False)['Close'], yf.download("GC=F", period="5y", progress=False)['Close']
@@ -154,11 +168,11 @@ def build_copper_gold_ratio_chart(colors: dict) -> go.Figure:
     ratio = (c / g).dropna()
     fig = go.Figure()
     fig.add_trace(go.Scatter(x=ratio.index, y=ratio, name="Cu/Au Ratio", line=dict(color=colors["mpw_blue"])))
-    fig.update_layout(title="Economic Barometer: Copper/Gold Ratio")
+    fig.update_layout(title="Copper/Gold Ratio")
     return fig
 
 def build_cu_au_pmi_chart(colors: dict) -> go.Figure:
-    fig = go.Figure().update_layout(title="Cu/Au Ratio vs. Manufacturing Output (PMI Proxy)")
+    fig = go.Figure().update_layout(title="Cu/Au Ratio vs. Manufacturing Output")
     return fig
 
 def build_btc_etf_flow_chart(colors: dict) -> go.Figure:
@@ -173,9 +187,9 @@ def build_btc_etf_flow_chart(colors: dict) -> go.Figure:
         fig = go.Figure()
         fig.add_trace(go.Bar(x=df['Date'], y=df['Total'], name="Daily Flow", marker_color=colors["mpw_blue"]))
         fig.add_trace(go.Scatter(x=df['Date'], y=df['Total'].cumsum(), name="Cumulative", line=dict(color=colors["mpw_orange"]), yaxis="y2"))
-        fig.update_layout(title="Bitcoin ETF Flows", yaxis2=dict(overlaying="y", side="right"))
+        fig.update_layout(title="Bitcoin Spot ETF Flows", yaxis2=dict(overlaying="y", side="right"))
         return fig
-    except: return go.Figure().update_layout(title="ETF Flows Data Unavailable")
+    except: return go.Figure().update_layout(title="ETF Flows Unavailable")
 
 def build_gli_bes_change_chart(colors: dict) -> go.Figure:
     liq = fred.get_series("WALCL").resample('W').last().pct_change(periods=6)*100
@@ -183,7 +197,7 @@ def build_gli_bes_change_chart(colors: dict) -> go.Figure:
     fig = go.Figure()
     fig.add_trace(go.Scatter(x=liq.index, y=liq, name="GLI$ %ch", line=dict(color="white")))
     fig.add_trace(go.Scatter(x=btc.index, y=btc, name="BTC %ch", line=dict(color=colors["mpw_orange"]), yaxis="y2"))
-    fig.update_layout(title="GLI$ vs BTC (6w %ch)", yaxis2=dict(overlaying="y", side="right"))
+    fig.update_layout(title="GLI$ vs BTC (6w %ch)")
     return fig
 
 def build_leading_liquidity_chart(colors: dict) -> go.Figure:
@@ -192,52 +206,8 @@ def build_leading_liquidity_chart(colors: dict) -> go.Figure:
     fig = go.Figure()
     fig.add_trace(go.Scatter(x=liq.index.shift(13), y=liq, name="GLI$ (Leading)", line=dict(color="white")))
     fig.add_trace(go.Scatter(x=btc.index, y=btc, name="BTC %ch", line=dict(color=colors["mpw_orange"]), yaxis="y2"))
-    fig.update_layout(title="Leading Indicator: GLI$ (+13w) vs. BTC", yaxis2=dict(overlaying="y", side="right"))
+    fig.update_layout(title="Leading GLI$ (+13w) vs. BTC")
     return fig
-
-def build_delinquency_unemployment_chart(colors: dict) -> go.Figure:
-    """Overlays the US Delinquency Rate with the Unemployment Rate."""
-    print("Fetching Delinquency and Unemployment data...")
-    
-    # DRBLACBS: Delinquency Rate on Business Loans
-    # UNRATE: Unemployment Rate
-    try:
-        # We fetch the full series to stay consistent with your other FRED charts
-        df = pd.DataFrame({
-            "Delinquency": fred.get_series("DRBLACBS"),
-            "Unemployment": fred.get_series("UNRATE")
-        }).ffill().dropna()
-
-        fig = go.Figure()
-
-        # Delinquency Line (Orange)
-        fig.add_trace(go.Scatter(
-            x=df.index, 
-            y=df["Delinquency"], 
-            name="Biz Delinquency %", 
-            line=dict(color=colors["mpw_orange"], width=3)
-        ))
-
-        # Unemployment Line (Blue - Right Axis)
-        fig.add_trace(go.Scatter(
-            x=df.index, 
-            y=df["Unemployment"], 
-            name="Unemployment %", 
-            yaxis="y2",
-            line=dict(color=colors["mpw_blue"], width=2, dash='dot')
-        ))
-
-        fig.update_layout(
-            title="<b>Credit Risk vs. Labor:</b> Delinquency & Unemployment",
-            yaxis=dict(title="Delinquency Rate (%)"),
-            yaxis2=dict(title="Unemployment Rate (%)", overlaying="y", side="right"),
-            template="macro_pulse",
-            hovermode="x unified"
-        )
-        return fig
-    except Exception as e:
-        print(f"Error building Delinquency chart: {e}")
-        return go.Figure().update_layout(title="Delinquency Data Unavailable")
 
 # ────────────────────────────────────────────────
 # 4. Deployment
@@ -257,12 +227,7 @@ def main():
     colors = register_macro_theme()
     btc = get_data()
 
-    figs = {
-
-        
-    }
-
-    # Create All 12 Figures
+    # Dictionary updated with commas to prevent SyntaxError
     figs = {
         "fg-rsi": build_fg_rsi_chart(btc["Price"], colors),
         "fg-rsi-21": build_fg_rsi_21_chart(btc["Price"], colors),
@@ -273,19 +238,17 @@ def main():
         "btc-m2": build_btc_m2_chart(btc["Price"], colors),
         "net-liq": build_net_liquidity_chart(btc["Price"], colors),
         "yield-unemp": build_yield_unemployment_chart(colors),
+        "delinquency-unemp": build_delinquency_unemployment_chart(colors),
         "copper-gold": build_copper_gold_ratio_chart(colors),
         "cu-au-pmi": build_cu_au_pmi_chart(colors),
         "btc-etf-flows": build_btc_etf_flow_chart(colors)
-        "delinquency-unemp": build_delinquency_unemployment_chart(colors)
     }
 
-    # Save Standalone HTMLs
     for name, fig in figs.items():
         fig.write_html(f"charts/{name.replace('-', '_')}.html", include_plotlyjs="cdn")
 
-    # Build Final Dashboard
     build_dashboard_index(figs)
-    print(f"Update Complete: {len(figs)} Charts successfully generated.")
+    print(f"Update Complete: {len(figs)} Charts generated.")
 
 if __name__ == "__main__":
     main()
