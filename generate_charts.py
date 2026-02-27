@@ -195,6 +195,50 @@ def build_leading_liquidity_chart(colors: dict) -> go.Figure:
     fig.update_layout(title="Leading Indicator: GLI$ (+13w) vs. BTC", yaxis2=dict(overlaying="y", side="right"))
     return fig
 
+def build_delinquency_unemployment_chart(colors: dict) -> go.Figure:
+    """Overlays the US Delinquency Rate with the Unemployment Rate."""
+    print("Fetching Delinquency and Unemployment data...")
+    
+    # DRBLACBS: Delinquency Rate on Business Loans
+    # UNRATE: Unemployment Rate
+    try:
+        # We fetch the full series to stay consistent with your other FRED charts
+        df = pd.DataFrame({
+            "Delinquency": fred.get_series("DRBLACBS"),
+            "Unemployment": fred.get_series("UNRATE")
+        }).ffill().dropna()
+
+        fig = go.Figure()
+
+        # Delinquency Line (Orange)
+        fig.add_trace(go.Scatter(
+            x=df.index, 
+            y=df["Delinquency"], 
+            name="Biz Delinquency %", 
+            line=dict(color=colors["mpw_orange"], width=3)
+        ))
+
+        # Unemployment Line (Blue - Right Axis)
+        fig.add_trace(go.Scatter(
+            x=df.index, 
+            y=df["Unemployment"], 
+            name="Unemployment %", 
+            yaxis="y2",
+            line=dict(color=colors["mpw_blue"], width=2, dash='dot')
+        ))
+
+        fig.update_layout(
+            title="<b>Credit Risk vs. Labor:</b> Delinquency & Unemployment",
+            yaxis=dict(title="Delinquency Rate (%)"),
+            yaxis2=dict(title="Unemployment Rate (%)", overlaying="y", side="right"),
+            template="macro_pulse",
+            hovermode="x unified"
+        )
+        return fig
+    except Exception as e:
+        print(f"Error building Delinquency chart: {e}")
+        return go.Figure().update_layout(title="Delinquency Data Unavailable")
+
 # ────────────────────────────────────────────────
 # 4. Deployment
 # ────────────────────────────────────────────────
@@ -213,6 +257,11 @@ def main():
     colors = register_macro_theme()
     btc = get_data()
 
+    figs = {
+
+        
+    }
+
     # Create All 12 Figures
     figs = {
         "fg-rsi": build_fg_rsi_chart(btc["Price"], colors),
@@ -227,6 +276,7 @@ def main():
         "copper-gold": build_copper_gold_ratio_chart(colors),
         "cu-au-pmi": build_cu_au_pmi_chart(colors),
         "btc-etf-flows": build_btc_etf_flow_chart(colors)
+        "delinquency-unemp": build_delinquency_unemployment_chart(colors)
     }
 
     # Save Standalone HTMLs
