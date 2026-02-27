@@ -9,81 +9,85 @@
         body { font-family: sans-serif; background-color: #0a0a0a; color: white; margin: 0; padding: 20px; }
         .container { max-width: 1200px; margin: auto; }
         .chart-card { background: #111; padding: 20px; border-radius: 12px; margin-bottom: 30px; border: 1px solid #333; }
-        h1 { text-align: center; color: #ff9900; }
-        h2 { border-bottom: 1px solid #333; padding-bottom: 10px; margin-top: 0; }
-        
-        /* Ensures chart areas have height before they load to prevent page jumping */
+        h1 { text-align: center; color: #ff9900; margin-bottom: 40px; }
+        h2 { border-bottom: 1px solid #333; padding-bottom: 10px; margin-top: 0; color: #eee; }
         .chart-card div { min-height: 450px; width: 100%; }
+        @media (max-width: 768px) { body { padding: 10px; } .chart-card { padding: 10px; } }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>MacroPulse Weekly</h1>
-        
+
+        <div class="chart-card">
+            <h2>Crash Sentiment Overlay</h2>
+            <div id="crash-sentiment">{{ crash_sentiment_chart }}</div>
+        </div>
+
         <div class="chart-card">
             <h2>Fear & Greed RSI (14-Period)</h2>
-            <div id="fg-rsi"></div>
+            <div id="fg-rsi">{{ fg_rsi_chart }}</div>
         </div>
 
         <div class="chart-card">
             <h2>BTC Fear & Greed RSI (21 Period)</h2>
-            <div id="fg-rsi-21"></div>
+            <div id="fg-rsi-21">{{ fg_rsi_21_chart }}</div>
         </div>
 
         <div class="chart-card">
             <h2>GLI$ vs. Crypto Basket (6w %ch)</h2>
-            <div id="gli-bes"></div>
+            <div id="gli-bes">{{ gli_bes_chart }}</div>
         </div>
 
         <div class="chart-card">
             <h2>Leading Indicator: GLI$ (+13w) vs. Crypto Basket</h2>
-            <div id="leading-liq"></div>
+            <div id="leading-liq">{{ leading_liq_chart }}</div>
         </div>
 
         <div class="chart-card">
             <h2>BTC vs. Google AI Trends</h2>
-            <div id="btc-ai"></div>
+            <div id="btc-ai">{{ btc_ai_chart }}</div>
         </div>
 
         <div class="chart-card">
             <h2>Narrative Heat: AI/AGI Hype vs. Productivity Reality</h2>
-            <div id="narrative-heat"></div>
+            <div id="narrative-heat">{{ narrative_heat_chart }}</div>
         </div>
 
         <div class="chart-card">
             <h2>BTC vs. M2 Money Supply</h2>
-            <div id="btc-m2"></div>
+            <div id="btc-m2">{{ btc_m2_chart }}</div>
         </div>
 
         <div class="chart-card">
             <h2>BTC vs. Net Liquidity</h2>
-            <div id="net-liq"></div>
+            <div id="net-liq">{{ net_liq_chart }}</div>
         </div>
 
         <div class="chart-card">
             <h2>10Y Yield vs. Unemployment Rate</h2>
-            <div id="yield-unemp"></div>
+            <div id="yield-unemp">{{ yield_unemp_chart }}</div>
         </div>
 
         <div class="chart-card">
             <h2>Copper/Gold Ratio</h2>
-            <div id="copper-gold"></div>
+            <div id="copper-gold">{{ copper_gold_chart }}</div>
         </div>
 
         <div class="chart-card">
             <h2>Cu/Au Ratio vs. Manufacturing Output (PMI Proxy)</h2>
-            <div id="cu-au-pmi"></div>
+            <div id="cu-au-pmi">{{ cu_au_pmi_chart }}</div>
         </div>
 
         <div class="chart-card">
             <h2>Institutional Pulse: Bitcoin Spot ETF Net Flows</h2>
-            <div id="btc-etf-flows"></div>
+            <div id="btc-etf-flows">{{ btc_etf_flows_chart }}</div>
         </div>
 
         <div class="chart-card">
             <h2>Delinquency Rate vs. Unemployment Rate</h2>
-            <div id="delinquency-unemp"></div>
-        </div>
+            <div id="delinquency-unemp">{{ delinquency_unemp_chart }}</div>
+        </div>            
     </div>
 </body>
 </html>
