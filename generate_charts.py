@@ -231,6 +231,71 @@ def build_leading_liquidity_chart(colors: dict) -> go.Figure:
     )
     return fig
 
+def build_crash_sentiment_overlay(colors: dict) -> go.Figure:
+    """Overlays 'Bitcoin Crash' Search Interest vs. Fear & Greed Index."""
+    print("Fetching 'Bitcoin Crash' trends and Sentiment data...")
+    
+    # 1. Fetch Google Trends via SerpApi (Search Term: 'bitcoin crash')
+    params = {
+        "engine": "google_trends",
+        "q": "bitcoin crash",
+        "data_type": "TIMESERIES",
+        "api_key": SERPAPI_KEY,
+        "date": "today 5-y" # Matching your screenshot period
+    }
+    
+    try:
+        search = GoogleSearch(params)
+        results = search.get_dict()
+        trends_data = results["interest_over_time"]["timeline_data"]
+        
+        # 2. Fetch Fear & Greed Index (Using standard API)
+        fng_url = "https://api.alternative.me/fng/?limit=0&format=json"
+        fng_res = requests.get(fng_url).json()['data']
+        fng_df = pd.DataFrame(fng_res)
+        fng_df['timestamp'] = pd.to_datetime(fng_df['timestamp'], unit='s')
+        fng_df['value'] = pd.to_numeric(fng_df['value'])
+        fng_df.set_index('timestamp', inplace=True)
+
+        fig = go.Figure()
+
+        # 3. Add 'Bitcoin Crash' Search Interest (The Panic)
+        fig.add_trace(go.Scatter(
+            x=[d['date'] for d in trends_data], 
+            y=[d['values'][0]['extracted_value'] for d in trends_data],
+            name="Search: 'Bitcoin Crash'",
+            line=dict(color=colors["mpw_red"], width=2),
+            fill='tozeroy',
+            fillcolor='rgba(255, 82, 82, 0.1)' # Subtle red fill for panic
+        ))
+
+        # 4. Add Fear & Greed Index (The Sentiment)
+        # Resampling to match the weekly/daily frequency of trends
+        fig.add_trace(go.Scatter(
+            x=fng_df.index, 
+            y=fng_df['value'],
+            name="Fear & Greed Index",
+            yaxis="y2",
+            line=dict(color=colors["mpw_cyan"], width=2, dash='dot')
+        ))
+
+        fig.update_layout(
+            title="<b>Panic Barometer:</b> 'Bitcoin Crash' Search vs. Sentiment",
+            yaxis=dict(title="Search Interest (0-100)"),
+            yaxis2=dict(
+                title="Fear & Greed (0-100)", 
+                overlaying="y", 
+                side="right",
+                range=[0, 100],
+                showgrid=False
+            ),
+            hovermode="x unified"
+        )
+        return fig
+    except Exception as e:
+        print(f"Panic Chart Error: {e}")
+        return go.Figure().update_layout(title="Panic Indicator Data Unavailable")
+
 # ────────────────────────────────────────────────
 # 4. Deployment
 # ────────────────────────────────────────────────
@@ -264,6 +329,7 @@ def main():
         "copper-gold": build_copper_gold_ratio_chart(colors),
         "cu-au-pmi": build_cu_au_pmi_chart(colors),
         "btc-etf-flows": build_btc_etf_flow_chart(colors)
+        "panic-barometer": build_crash_sentiment_overlay(colors)
     }
 
     for name, fig in figs.items():
