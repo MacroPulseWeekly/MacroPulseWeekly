@@ -172,8 +172,63 @@ def build_copper_gold_ratio_chart(colors: dict) -> go.Figure:
     return fig
 
 def build_cu_au_pmi_chart(colors: dict) -> go.Figure:
-    fig = go.Figure().update_layout(title="Cu/Au Ratio vs. Manufacturing Output")
-    return fig
+    print("Fetching Copper/Gold vs ISM PMI data...")
+    try:
+        # 1. Fetch Copper and Gold (Daily)
+        c = yf.download("HG=F", period="5y", progress=False)['Close']
+        g = yf.download("GC=F", period="5y", progress=False)['Close']
+        
+        # Handle MultiIndex if necessary
+        if isinstance(c, pd.DataFrame): c = c.iloc[:, 0]
+        if isinstance(g, pd.DataFrame): g = g.iloc[:, 0]
+        
+        ratio = (c / g).dropna()
+
+        # 2. Fetch ISM Manufacturing PMI from FRED
+        # 'MANPMI' is the standard ISM Manufacturing PMI series ID
+        pmi = fred.get_series("MANPMI", observation_start="2019-01-01")
+        pmi = pmi.resample('D').ffill() # Forward fill monthly data to daily
+        
+        # 3. Merge and Align
+        df = pd.concat([ratio.rename("Ratio"), pmi.rename("PMI")], axis=1).dropna()
+
+        # 4. Create Interactive Plotly Chart
+        fig = go.Figure()
+
+        # Add Copper/Gold Ratio (Leading Indicator)
+        fig.add_trace(go.Scatter(
+            x=df.index, y=df["Ratio"], 
+            name="Cu/Au Ratio", 
+            line=dict(color=colors["mpw_blue"], width=2)
+        ))
+
+        # Add ISM Manufacturing PMI (Real Economic Data)
+        fig.add_trace(go.Scatter(
+            x=df.index, y=df["PMI"], 
+            name="ISM PMI", 
+            yaxis="y2", 
+            line=dict(color=colors["mpw_orange"], width=2, dash='dot')
+        ))
+
+        # Threshold line at 50 (Expansion/Contraction boundary)
+        fig.add_hline(y=50, line=dict(color="gray", dash="dash", width=1), yref="y2")
+
+        fig.update_layout(
+            title="<b>Global Growth:</b> Copper/Gold Ratio vs. ISM PMI",
+            yaxis=dict(title="Cu/Au Ratio"),
+            yaxis2=dict(
+                title="ISM PMI (50 = Neutral)", 
+                overlaying="y", 
+                side="right",
+                showgrid=False
+            ),
+            hovermode="x unified"
+        )
+        return fig
+        
+    except Exception as e:
+        print(f"Cu/Au PMI Error: {e}")
+        return go.Figure().update_layout(title="ISM PMI Correlation Data Unavailable")
 
 def build_btc_etf_flow_chart(colors: dict) -> go.Figure:
     url = "https://farside.co.uk/bitcoin-etf-flow-all-data/"
@@ -340,11 +395,10 @@ def build_dashboard_index(figs_dict: dict):
 def main():
     ensure_charts_dir()
     colors = register_macro_theme()
-    btc = get_data()
+    btc = get_data() # This pulls the 5-year BTC data
 
-    # Dictionary updated with commas and matching HTML IDs
     figs = {
-        "crash-sentiment": build_crash_sentiment_overlay(colors), # Key matches HTML ID
+        "crash-sentiment": build_crash_sentiment_overlay(colors),
         "fg-rsi": build_fg_rsi_chart(btc["Price"], colors),
         "fg-rsi-21": build_fg_rsi_21_chart(btc["Price"], colors),
         "gli-bes": build_gli_bes_change_chart(colors),
@@ -356,14 +410,17 @@ def main():
         "yield-unemp": build_yield_unemployment_chart(colors),
         "delinquency-unemp": build_delinquency_unemployment_chart(colors),
         "copper-gold": build_copper_gold_ratio_chart(colors),
-        "cu-au-pmi": build_cu_au_pmi_chart(colors),
-        "btc-etf-flows": build_btc_etf_flow_chart(colors) # Added comma here
+        "cu-au-pmi": build_cu_au_pmi_chart(colors), # FIXED: Ensure this function now has the logic we wrote
+        "btc-etf-flows": build_btc_etf_flow_chart(colors)
     }
 
-    # Save individual files for backup/social sharing
+    # Save individual HTML snippets for backup
     for name, fig in figs.items():
-        fig.write_html(f"charts/{name.replace('-', '_')}.html", include_plotlyjs="cdn")
+        # Using underscores for filenames is safer for some servers
+        safe_name = name.replace('-', '_')
+        fig.write_html(f"charts/{safe_name}.html", include_plotlyjs="cdn")
 
-    # This function pushes the charts into your template.html
+    # Generate the final index.html using your template
     build_dashboard_index(figs)
-    print(f"Update Complete: {len(figs)} Charts generated.")
+    
+    print(f"Success: {len(figs)} charts generated and pushed to index.html.")
