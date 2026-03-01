@@ -6,88 +6,104 @@
     <title>MacroPulse Weekly Dashboard</title>
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     <style>
-        body { font-family: sans-serif; background-color: #0a0a0a; color: white; margin: 0; padding: 20px; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #0a0a0a; color: white; margin: 0; padding: 20px; line-height: 1.6; }
         .container { max-width: 1200px; margin: auto; }
-        .chart-card { background: #111; padding: 20px; border-radius: 12px; margin-bottom: 30px; border: 1px solid #333; }
-        h1 { text-align: center; color: #ff9900; margin-bottom: 40px; }
-        h2 { border-bottom: 1px solid #333; padding-bottom: 10px; margin-top: 0; color: #eee; }
-        .chart-card div { min-height: 450px; width: 100%; }
-        @media (max-width: 768px) { body { padding: 10px; } .chart-card { padding: 10px; } }
+        .chart-card { background: #111; padding: 20px; border-radius: 12px; margin-bottom: 30px; border: 1px solid #333; box-shadow: 0 4px 20px rgba(0,0,0,0.5); }
+        h1 { text-align: center; color: #FF8C42; margin-bottom: 10px; font-size: 2.5rem; }
+        .subtitle { text-align: center; color: #888; margin-bottom: 40px; font-size: 1rem; }
+        h2 { border-bottom: 1px solid #333; padding-bottom: 10px; margin-top: 0; color: #4DA3FF; font-size: 1.25rem; }
+        
+        /* Ensure charts take up appropriate space but stay responsive */
+        .chart-container { width: 100%; min-height: 450px; }
+        
+        .footer { text-align: center; color: #666; font-size: 0.8rem; margin-top: 50px; padding-bottom: 30px; }
+
+        @media (max-width: 768px) { 
+            body { padding: 10px; } 
+            .chart-card { padding: 15px; } 
+            .chart-container { min-height: 350px; }
+            h1 { font-size: 1.8rem; }
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>MacroPulse Weekly</h1>
+        <p class="subtitle">Institutional-Grade Macro & Crypto Intelligence</p>
 
         <div class="chart-card">
             <h2>Crash Sentiment Overlay</h2>
-            <div id="crash-sentiment">{{ crash_sentiment_chart }}</div>
+            <div id="crash-sentiment" class="chart-container">{{ crash_sentiment_chart }}</div>
         </div>
 
         <div class="chart-card">
             <h2>Fear & Greed RSI (14-Period)</h2>
-            <div id="fg-rsi">{{ fg_rsi_chart }}</div>
+            <div id="fg-rsi" class="chart-container">{{ fg_rsi_chart }}</div>
         </div>
 
         <div class="chart-card">
             <h2>BTC Fear & Greed RSI (21 Period)</h2>
-            <div id="fg-rsi-21">{{ fg_rsi_21_chart }}</div>
+            <div id="fg-rsi-21" class="chart-container">{{ fg_rsi_21_chart }}</div>
         </div>
 
         <div class="chart-card">
             <h2>GLI$ vs. Crypto Basket (6w %ch)</h2>
-            <div id="gli-bes">{{ gli_bes_chart }}</div>
+            <div id="gli-bes" class="chart-container">{{ gli_bes_chart }}</div>
         </div>
 
         <div class="chart-card">
             <h2>Leading Indicator: GLI$ (+13w) vs. Crypto Basket</h2>
-            <div id="leading-liq">{{ leading_liq_chart }}</div>
+            <div id="leading-liq" class="chart-container">{{ leading_liq_chart }}</div>
         </div>
 
         <div class="chart-card">
             <h2>BTC vs. Google AI Trends</h2>
-            <div id="btc-ai">{{ btc_ai_chart }}</div>
+            <div id="btc-ai" class="chart-container">{{ btc_ai_chart }}</div>
         </div>
 
         <div class="chart-card">
             <h2>Narrative Heat: AI/AGI Hype vs. Productivity Reality</h2>
-            <div id="narrative-heat">{{ narrative_heat_chart }}</div>
+            <div id="narrative-heat" class="chart-container">{{ narrative_heat_chart }}</div>
         </div>
 
         <div class="chart-card">
             <h2>BTC vs. M2 Money Supply</h2>
-            <div id="btc-m2">{{ btc_m2_chart }}</div>
+            <div id="btc-m2" class="chart-container">{{ btc_m2_chart }}</div>
         </div>
 
         <div class="chart-card">
             <h2>BTC vs. Net Liquidity</h2>
-            <div id="net-liq">{{ net_liq_chart }}</div>
+            <div id="net-liq" class="chart-container">{{ net_liq_chart }}</div>
         </div>
 
         <div class="chart-card">
             <h2>10Y Yield vs. Unemployment Rate</h2>
-            <div id="yield-unemp">{{ yield_unemp_chart }}</div>
+            <div id="yield-unemp" class="chart-container">{{ yield_unemp_chart }}</div>
         </div>
 
         <div class="chart-card">
             <h2>Copper/Gold Ratio</h2>
-            <div id="copper-gold">{{ copper_gold_chart }}</div>
+            <div id="copper-gold" class="chart-container">{{ copper_gold_chart }}</div>
         </div>
 
         <div class="chart-card">
-            <h2>Cu/Au Ratio vs. Manufacturing Output (PMI Proxy)</h2>
-            <div id="cu-au-pmi">{{ cu_au_pmi_chart }}</div>
+            <h2>Cu/Au Ratio vs. Manufacturing Output (ISM PMI)</h2>
+            <div id="cu-au-pmi" class="chart-container">{{ cu_au_pmi_chart }}</div>
         </div>
 
         <div class="chart-card">
             <h2>Institutional Pulse: Bitcoin Spot ETF Net Flows</h2>
-            <div id="btc-etf-flows">{{ btc_etf_flows_chart }}</div>
+            <div id="btc-etf-flows" class="chart-container">{{ btc_etf_flows_chart }}</div>
         </div>
 
         <div class="chart-card">
             <h2>Delinquency Rate vs. Unemployment Rate</h2>
-            <div id="delinquency-unemp">{{ delinquency_unemp_chart }}</div>
-        </div>            
+            <div id="delinquency-unemp" class="chart-container">{{ delinquency_unemp_chart }}</div>
+        </div>
+
+        <div class="footer">
+            Last Updated: {{ last_updated }} | Data via FRED, Yahoo Finance & SerpApi
+        </div>
     </div>
 </body>
 </html>
