@@ -67,31 +67,43 @@ def get_btc_data():
     return btc
 
 def get_fmp_cash_data(symbols):
-    """Fetches latest cash and market cap from FMP for a list of tickers."""
     if not FMP_API_KEY:
+        print("CRITICAL: FMP_API_KEY environment variable is empty.")
         return pd.DataFrame()
     
     results = []
+    # Try the standard v3 endpoint
     base_url = "https://financialmodelingprep.com/api/v3"
     
     for symbol in symbols:
         try:
-            # 1. Balance Sheet
-            bs_url = f"{base_url}/balance-sheet-statement/{symbol}"
-            bs_res = requests.get(bs_url, params={"limit": 1, "apikey": FMP_API_KEY}).json()
-            # 2. Market Cap
-            mc_url = f"{base_url}/market-capitalization/{symbol}"
-            mc_res = requests.get(mc_url, params={"apikey": FMP_API_KEY}).json()
+            # Added a timeout and explicit headers to prevent being blocked as a bot
+            headers = {'User-Agent': 'Mozilla/5.0'}
             
-            if bs_res and mc_res:
-                cash = bs_res[0].get('cashAndCashEquivalents', 0)
-                mkt_cap = mc_res[0].get('marketCap', 1)
+            # 1. Fetch Balance Sheet
+            bs_url = f"{base_url}/balance-sheet-statement/{symbol}"
+            bs_res = requests.get(bs_url, params={"limit": 1, "apikey": FMP_API_KEY}, headers=headers, timeout=10)
+            bs_data = bs_res.json()
+
+            # 2. Fetch Company Profile (for Market Cap)
+            profile_url = f"{base_url}/profile/{symbol}"
+            profile_res = requests.get(profile_url, params={"apikey": FMP_API_KEY}, headers=headers, timeout=10)
+            profile_data = profile_res.json()
+            
+            # Check if we actually got data back
+            if isinstance(bs_data, list) and len(bs_data) > 0 and isinstance(profile_data, list) and len(profile_data) > 0:
+                cash = bs_data[0].get('cashAndCashEquivalents', 0)
+                mkt_cap = profile_data[0].get('mktCap', 1)
+                
                 results.append({
                     "Symbol": symbol,
                     "Cash_B": cash / 1e9,
                     "Mkt_Cap_B": mkt_cap / 1e9,
-                    "Cash_to_Cap": (cash / mkt_cap) * 100
+                    "Cash_to_Cap": (cash / mkt_cap) * 100 if mkt_cap > 0 else 0
                 })
+            else:
+                print(f"Warning: No data returned for {symbol}. Check API Plan or Ticker.")
+                
         except Exception as e:
             print(f"FMP Error for {symbol}: {e}")
             
