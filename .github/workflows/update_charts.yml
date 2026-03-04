@@ -5,6 +5,7 @@ permissions:
 
 on:
   schedule:
+    # Runs every 6 hours
     - cron: '0 */6 * * *'
   workflow_dispatch:
 
@@ -21,6 +22,7 @@ jobs:
         with:
           python-version: '3.12'
           cache: 'pip'
+          # Dependency caching helps speed up the 6-hour runs
           cache-dependency-path: 'generate_charts.py'
 
       - name: Install dependencies
@@ -30,19 +32,26 @@ jobs:
 
       - name: Run chart generator
         env:
+          # Mapping your GitHub Secrets to the Python Environment
           FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
           SERPAPI_KEY: ${{ secrets.SERPAPI_KEY }}
+          FMP_API_KEY: ${{ secrets.FMP_API_KEY }}
         run: python generate_charts.py
 
       - name: Commit and push updated charts & index
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git pull origin main
+          
+          # Pull latest to avoid conflict before pushing
+          git pull origin main --rebase
+          
+          # Add the generated charts and the main dashboard index
           git add charts/ index.html
+          
           if git diff --staged --quiet; then
             echo "No changes to commit"
           else
-            git commit -m "Automated chart update [$(date +'%Y-%m-%d %H:%M')]"
+            git commit -m "Automated macro update [$(date +'%Y-%m-%d %H:%M')]"
             git push origin HEAD:main
           fi
