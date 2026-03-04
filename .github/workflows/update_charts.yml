@@ -43,15 +43,13 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           
-          # 1. Stage the new files created by the script FIRST
+          # 1. Stage the changes FIRST so Git knows we want to keep them
           git add charts/ index.html
           
-          # 2. Pull with rebase and autostash to avoid "unstaged changes" errors
-          # This moves your new charts to a temporary stash, pulls updates, 
-          # and then reapplies your charts on top.
+          # 2. Pull with rebase and autostash to avoid the "exit code 128"
           git pull origin main --rebase --autostash
           
-          # 3. Check if there are actual differences to commit
+          # 3. Only commit if there are actual differences
           if git diff --staged --quiet; then
             echo "No changes to commit"
           else
