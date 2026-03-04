@@ -22,7 +22,7 @@ jobs:
         with:
           python-version: '3.12'
           cache: 'pip'
-          # Dependency caching helps speed up the 6-hour runs
+          # Ensure this matches your actual script filename
           cache-dependency-path: 'generate_charts.py'
 
       - name: Install dependencies
@@ -43,12 +43,15 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           
-          # Pull latest to avoid conflict before pushing
-          git pull origin main --rebase
-          
-          # Add the generated charts and the main dashboard index
+          # 1. Stage the new files created by the script FIRST
           git add charts/ index.html
           
+          # 2. Pull with rebase and autostash to avoid "unstaged changes" errors
+          # This moves your new charts to a temporary stash, pulls updates, 
+          # and then reapplies your charts on top.
+          git pull origin main --rebase --autostash
+          
+          # 3. Check if there are actual differences to commit
           if git diff --staged --quiet; then
             echo "No changes to commit"
           else
